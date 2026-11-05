@@ -37,14 +37,14 @@ Design the mark as **one sheet/edge folding out**, not a copy/paste clipboard sy
 - Recognizable in a monochrome 16px tray icon; contrast at 16/20/24px before finalizing full-color art.
 - The fold can turn ~90 degrees in a short transform, echoing the real collapsed/expanded behavior.
 - Avoid document-corner cliché, overlapping-cards pile, 3D mockup-only identity, gradients and glossy volumetric effects.
-- Develop black/white mark FIRST; only afterward add a modest accent.
+- The brand mark is intentionally monochrome in all shipping variants. Use positive/negative space, the folded edge and restrained animation for recognition. Do NOT add a brand accent color.
 - Have four exports based on ONE master vector: full brand lockup, compact app icon, single-color tray icon, installer/Store icon set. Add dark/light variants and a "preview/beta" marker visually distinct from stable.
 - Do not use or trace the upstream project's logo, mark, illustration, onboarding assets, or screenshots as our own brand originals.
 
 ## 4. Visual system and constraints (provisional)
 
-- Dark neutral canvas: #15171A; elevated neutral: #22252A; paper/off-white text: #F3F4F0; secondary text: #9FA5AB.
-- One restrained accent: #D8FF87 (test a colder neutral variant). Accent mainly marks active/focused states, small brand fold, and high-value actions; it should NOT flood every card or button.
+- Match the existing black/white visual identity: near-black canvas #151515; elevated neutral #242424; off-white text #F2F2F0; muted neutral #969696; dividers #353535. These are candidates, not a forced UI re-theme.
+- No new green, lime, purple, or other brand accent color. Active/focus/drag states rely on white/grey contrast, opacity, shape and motion; preserve any color inherent in the user's copied content instead of tinting it.
 - Rounded geometry: 8–12px for item surfaces; 12–16px for floating panel; circles only for icon-only controls.
 - Thin separation and clear spatial hierarchy; remove decorative borders where grouping can be conveyed with spacing.
 - Minimal type hierarchy: UI text remains small/compact; larger expressive typography belongs only on website/launch assets, not inside always-on panel.
@@ -58,7 +58,7 @@ Design the mark as **one sheet/edge folding out**, not a copy/paste clipboard sy
 - Collapsed (semantic label **折叠** when action will collapse; **展开** when action will expand) and expanded are the only public terms. Internally row counts may persist.
 - Header has search, contextual item count, lightweight icon-only folding chevron, useful actions. No large product wordmark in the header.
 - Every item retains native content identity; images remain images, no gratuitous branded cards.
-- Small accent on active tab/focus/drag target; quiet neutral idle UI.
+- Quiet neutral idle UI; active tab, focus and drag targets use grayscale luminance, shape and restrained motion, never a new accent hue.
 - Empty state: one useful sentence + short action, no enormous illustration.
 
 ### System entry points
@@ -135,7 +135,7 @@ Create a small brand source of truth to power UI copy, links and colors; **do no
 
 ## 10. Decisions and non-decisions
 
-Chosen for V1 concept: geometry-based fold; quiet neutral UI; branding kept out of primary clipboard content; separate fork release channel; no large UI redesign required.
+Chosen for V1 concept: monochrome geometry-based fold (black / white / gray only); brand recognition via silhouette and interaction rather than hue; branding kept out of primary clipboard content; separate fork release channel; no large UI redesign required.
 
 Not chosen: final product name, legal app ID, website domain, contact address, logo art export, public release tag, pricing, analytics. These must not be invented or committed as final.
 

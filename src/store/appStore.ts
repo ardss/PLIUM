@@ -8,6 +8,7 @@
  */
 import { create } from 'zustand'
 import { edge } from '../lib/edge'
+import { dockFlip } from '../lib/dockFlipBus'
 import { releaseAllKeyboard } from '../lib/keyboardFocus'
 import { t } from '../i18n'
 import { loadRecents } from '../lib/emoji/prefs'
@@ -304,7 +305,13 @@ export const useStore = create<AppState>((set, get) => ({
     if (get().dropTargetId !== dropTargetId) set({ dropTargetId })
   },
   expandedStackId: null,
-  setExpandedStackId: (expandedStackId) => set({ expandedStackId }),
+  setExpandedStackId: (expandedStackId) => {
+    if (get().expandedStackId === expandedStackId) return
+    // A bundle changes its own width and may wrap the surrounding cards.
+    // Capture the live positions/sizes before React commits the expansion.
+    dockFlip.capture()
+    set({ expandedStackId })
+  },
   internalDragReq: null,
   toasts: [],
   tutorialStep: 0,
@@ -622,6 +629,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   async togglePin(id, pinned) {
+    // Pinning moves the SAME card between two React sections. Capture the
+    // live DOM positions before Zustand reflows both card groups so the
+    // existing interruptible FLIP can carry them to their new positions.
+    dockFlip.capture()
     // Optimistic: flip locally, then let the pushed list confirm.
     set({
       items: get().items.map((it) => (it.id === id ? { ...it, pinned } : it)),
@@ -636,6 +647,9 @@ export const useStore = create<AppState>((set, get) => ({
 
   async remove(id) {
     const previousItems = get().items
+    // Remaining cards should glide into the vacated slot rather than jump
+    // one whole row when a deletion reflows the multi-row Dock.
+    dockFlip.capture()
     set({ items: previousItems.filter((it) => it.id !== id) })
     try {
       const items = await edge.deleteItem(id)

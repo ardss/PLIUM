@@ -26,7 +26,8 @@
 import { useEffect, useRef } from 'react'
 import { edge } from '../lib/edge'
 import { useStore } from '../store/appStore'
-import { normalizeHoverOpenDelay } from '../../shared/types'
+import { normalizeHoverOpenDelay, dockBladeHeight } from '../../shared/types'
+import { DOCK_MOTION } from '../lib/dockMotion'
 import { DRAG_CATCH_DWELL_MS, edgeDragPull, inEdgeDragCatch, setEdgeDragPull, type EdgeDragLane } from '../lib/edgeDrag'
 
 const TRIGGER_PX = 3    // leftmost px that count as "the edge"
@@ -60,6 +61,12 @@ function flyoutWide(state: ReturnType<typeof useStore.getState>): number {
 function dwellMsFor(state: { settings: { hoverOpenDelay?: number } }): number {
   return DWELL_MS + normalizeHoverOpenDelay(state.settings.hoverOpenDelay)
 }
+
+/** When settings.dockRows last changed — while the blade height tween runs
+ *  (and the window catches up), a cursor parked on the old handle position is
+ *  briefly outside the new blade; keep the shelf open through it. */
+let _dockRowsChangedAt = 0
+const DOCK_ROWS_GRACE_MS = DOCK_MOTION.durationMs + 1180
 
 export const PANEL_LEAVE_EVENT = 'panel:leave'
 export const PANEL_ENTER_EVENT = 'panel:enter'
@@ -263,6 +270,9 @@ export function useEdgeHover(): void {
       ) {
         recompute()
       }
+      if (state.settings.dockRows !== prevState.settings.dockRows) {
+        _dockRowsChangedAt = Date.now()
+      }
     })
     return () => {
       window.removeEventListener('resize', recompute)
@@ -433,6 +443,7 @@ export function useEdgeHover(): void {
       if (state.cardMenu && cardMenuHolds(state.cardMenu, state.cardMenuRect, cursorInWindow(state, lastClient.current))) return true
       const timeSincePositionChange = state.sliderReleasedTime > 0 ? Date.now() - state.sliderReleasedTime : Infinity
       if (timeSincePositionChange < 1750) return true
+      if (Date.now() - _dockRowsChangedAt < DOCK_ROWS_GRACE_MS) return true
 
       const { x, y } = lastClient.current
       if (x < -BUFFER_PX || y < 0) return true // unknown — be conservative, don't close
@@ -443,7 +454,10 @@ export function useEdgeHover(): void {
       if (s.stickPosition === 'top') {
         const dispW = displaySize.current.width
         const { dockWidth, dockX } = getHorizontalDockMetrics(dispW, s.horizontalOffset ?? 0.5, s.hotZoneHeight ?? 0.25, s.triggerAlignment || 'center')
-        const bladeHeight = 218
+        // Follow the configured row count: a 2/3-row dock is taller, and the
+        // old hard-coded 218 closed the shelf whenever the cursor hovered its
+        // lower half (exactly where the nav buttons sit).
+        const bladeHeight = dockBladeHeight(s.dockRows ?? 1)
         const inBlade = y >= -BUFFER_PX && y <= bladeHeight && x >= dockX - BUFFER_PX && x <= dockX + dockWidth + BUFFER_PX
         if (inBlade) return true
         if (hasFlyout && state.previewFlyoutRect && state.previewFlyoutRect.left !== undefined && state.previewFlyoutRect.right !== undefined) {
@@ -607,6 +621,11 @@ export function useEdgeHover(): void {
 
           if (!state.open) return
           if (state.edgeHintActive) state.setEdgeHintActive(false)
+          // Row-count tween in flight: the blade is mid-height; hold.
+          if (Date.now() - _dockRowsChangedAt < DOCK_ROWS_GRACE_MS) {
+            cancelClose()
+            return
+          }
 
           const now = Date.now()
           if (now - lastSetInteractiveRef.current > 2000) {
@@ -614,7 +633,9 @@ export function useEdgeHover(): void {
             edge.setInteractive(true)
           }
 
-          const baseBladeH = 218
+          // Row-count aware (was a fixed 218, which closed 2/3-row docks when
+          // the cursor hovered their lower half).
+          const baseBladeH = dockBladeHeight(state.settings.dockRows ?? 1)
           const keepOpenDepth = baseBladeH
           const startCloseDepth = baseBladeH + 40
           const insideX = data.x >= dockX - BUFFER_PX && data.x <= dockX + dockWidth + BUFFER_PX

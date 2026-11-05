@@ -59,6 +59,8 @@ export interface EdgeApi {
    * so drag initiation is 0ms.
    */
   prestageDrag: (req: DragRequest) => void
+  /** Browser-native text drag only; does not write the clipboard or stage a file. */
+  setTextDragActive: (active: boolean) => void
   addFiles: (paths: string[]) => Promise<import('./types').ClipboardItemDto[]>
   addItemData: (data: import('./types').ItemData) => Promise<import('./types').ClipboardItemDto[]>
   mergeItems: (sourceId: string, targetId: string) => Promise<import('./types').MergeResult>

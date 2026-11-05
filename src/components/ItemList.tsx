@@ -18,6 +18,9 @@ import { ChevronDownIcon, PinFillIcon } from './icons'
 import { playExpandSound, playButtonClickSound } from '../lib/soundEffects'
 
 import { useTranslation } from '../i18n'
+import { publishListScroll, subscribeSliderDrag } from '../lib/dockScrollBus'
+import { dockFlip } from '../lib/dockFlipBus'
+import { DOCK_MOTION, easingWaapi } from '../lib/dockMotion'
 
 /**
  * Reopening the shelf after this long (or after something new was copied)
@@ -48,13 +51,31 @@ export function ItemList() {
   const isDraggingCard = useStore((s) => !!s.internalDragReq)
   const stickPosition = useStore((s) => s.settings.stickPosition)
   const reduceMotion = useStore((s) => !!s.settings.reduceMotion)
+  const expandedStackId = useStore((s) => s.expandedStackId)
   const isHorizontal = stickPosition === 'top'
+  // Two Dock states: one row compact, three rows expanded.
+  const dockRows = useStore((s) => s.settings.dockRows) || 1
+  const multiRow = isHorizontal && dockRows > 1
+  // The axis the list actually scrolls on: horizontal only for the classic
+  // single-row dock (side docks and multi-row docks scroll vertically).
+  const axisIsHorizontal = isHorizontal && !multiRow
   
   const typeFilter = useStore((s) => s.typeFilter) || 'all'
   const filterScrollMap = useRef<Record<string, { top: number; left: number }>>({})
   const prevFilterRef = useRef(typeFilter)
 
   const [showScrollTop, setShowScrollTop] = useState(false)
+  // Pointer resting where the nav controls live also reveals them (even at
+  // the very start/end, so the opposite way is always offered). Multi-row
+  // anchors its overlay buttons beside the card-adjacent scrubber; otherwise
+  // it uses the original bottom-right corner cluster.
+  const [cornerHover, setCornerHover] = useState(false)
+  const handleCornerHover = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = getListRect()
+    if (!r) return
+    const hover = e.clientX > r.right - 150 && e.clientY > r.bottom - 70
+    setCornerHover(prev => prev === hover ? prev : hover)
+  }
   // The way back to where the list was, offered for a moment after a reopen
   // started it at the top (null when there is nothing to go back to).
   const [backSpot, setBackSpot] = useState<BackSpot | null>(null)
@@ -68,6 +89,32 @@ export function ItemList() {
   })
 
   const pinnedCollapsed = collapsedMap[typeFilter] ?? true
+
+  // Keep complete card columns centered; avoid per-card rail measurements.
+  useLayoutEffect(() => {
+    const list = listRef.current
+    if (!multiRow || !list || total === 0) return
+    const update = () => {
+      const card = list.querySelector<HTMLElement>('.recent-section > .item, .pinned-accordion-inner > .item')
+      if (!card || list.clientWidth < 100) return
+      const usable = list.clientWidth -
+        parseFloat(getComputedStyle(list).paddingLeft) -
+        parseFloat(getComputedStyle(list).paddingRight)
+      const gap = DOCK_MOTION.gapPx
+      const pinTab = pinned.length ? 34 : 0
+      const columns = Math.max(1, Math.min(total,
+        Math.floor((usable - pinTab + gap) / (card.offsetWidth + gap))))
+      const width = Math.min(usable, pinTab + columns * card.offsetWidth + (columns - 1) * gap)
+      list.style.setProperty('--dock-content-width', String(width) + 'px')
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(list)
+    return () => {
+      observer.disconnect()
+      list.style.removeProperty('--dock-content-width')
+    }
+  }, [multiRow, total, typeFilter, query, pinnedCollapsed, pinned.length])
 
   const setPinnedCollapsed = (val: boolean) => {
     setCollapsedMap((prev) => {
@@ -120,10 +167,10 @@ export function ItemList() {
   const captureSpot = (): BackSpot | null => {
     const el = listRef.current
     if (!el) return null
-    const pos = isHorizontal ? el.scrollLeft : el.scrollTop
-    if (pos < (isHorizontal ? el.clientWidth : el.clientHeight) / 2) return null
+    const pos = axisIsHorizontal ? el.scrollLeft : el.scrollTop
+    if (pos < (axisIsHorizontal ? el.clientWidth : el.clientHeight) / 2) return null
     const box = el.getBoundingClientRect()
-    const hit = isHorizontal
+    const hit = axisIsHorizontal
       ? document.elementFromPoint(box.left + 24, box.top + box.height / 2)
       : document.elementFromPoint(box.left + box.width / 2, box.top + 24)
     const card = hit?.closest('.list .item-main') as HTMLElement | null
@@ -132,7 +179,7 @@ export function ItemList() {
       filter: useStore.getState().typeFilter || 'all',
       pos,
       id: card?.dataset.id,
-      offset: at ? (isHorizontal ? at.left - box.left : at.top - box.top) : 0
+      offset: at ? (axisIsHorizontal ? at.left - box.left : at.top - box.top) : 0
     }
   }
 
@@ -147,9 +194,9 @@ export function ItemList() {
     if (card && !card.closest('.pinned-accordion:not(.is-expanded)')) {
       const box = el.getBoundingClientRect()
       const at = card.getBoundingClientRect()
-      target = (isHorizontal ? el.scrollLeft + at.left - box.left : el.scrollTop + at.top - box.top) - spot.offset
+      target = (axisIsHorizontal ? el.scrollLeft + at.left - box.left : el.scrollTop + at.top - box.top) - spot.offset
     }
-    el.scrollTo({ [isHorizontal ? 'left' : 'top']: Math.max(0, target), behavior: reduceMotion ? 'auto' : 'smooth' })
+    el.scrollTo({ [axisIsHorizontal ? 'left' : 'top']: Math.max(0, target), behavior: 'auto' })
   }
 
   const lastClosedAt = useRef<number>(Date.now())
@@ -184,7 +231,7 @@ export function ItemList() {
           if (timeSinceClosed >= REOPEN_AT_TOP_AFTER_MS || hasNewCopyWhileClosed) {
             filterScrollMap.current = {}
             if (listRef.current) {
-              if (isHorizontal) listRef.current.scrollLeft = 0
+              if (axisIsHorizontal) listRef.current.scrollLeft = 0
               else listRef.current.scrollTop = 0
             }
             // Never silently: offer the way back for a moment.
@@ -197,7 +244,7 @@ export function ItemList() {
       }
     })
     return unsub
-  }, [isHorizontal])
+  }, [isHorizontal, axisIsHorizontal])
 
   useLayoutEffect(() => {
     // If a brand new or freshly updated item was added while panel is open, jump to top
@@ -208,7 +255,7 @@ export function ItemList() {
       if (isNewRecent || isNewPinned) {
         filterScrollMap.current[typeFilter] = { top: 0, left: 0 }
         if (listRef.current) {
-          if (isHorizontal) listRef.current.scrollLeft = 0
+          if (axisIsHorizontal) listRef.current.scrollLeft = 0
           else listRef.current.scrollTop = 0
         }
       }
@@ -235,7 +282,7 @@ export function ItemList() {
 
       // Restore incoming filter's saved scroll position (defaulting to 0)
       const saved = filterScrollMap.current[typeFilter]
-      if (isHorizontal) {
+      if (axisIsHorizontal) {
         el.scrollLeft = saved?.left ?? 0
       } else {
         el.scrollTop = saved?.top ?? 0
@@ -250,7 +297,7 @@ export function ItemList() {
       prevQueryRef.current = query
       setBackSpot(null)
       if (listRef.current) {
-        if (isHorizontal) listRef.current.scrollLeft = 0
+        if (axisIsHorizontal) listRef.current.scrollLeft = 0
         else listRef.current.scrollTop = 0
       }
     }
@@ -282,28 +329,55 @@ export function ItemList() {
       top: el.scrollTop,
       left: el.scrollLeft
     }
-    const scrollPos = isHorizontal ? el.scrollLeft : el.scrollTop
+    const scrollPos = axisIsHorizontal ? el.scrollLeft : el.scrollTop
     const next = scrollPos > 50
     setShowScrollTop((prev) => (prev === next ? prev : next))
     // Scrolling on your own: the offer is no longer needed.
     if (next) setBackSpot((prev) => (prev ? null : prev))
+    // Keep the header slider in sync (0..1 along the active scroll axis).
+    if (isHorizontal) {
+      const max = axisIsHorizontal
+        ? el.scrollWidth - el.clientWidth
+        : el.scrollHeight - el.clientHeight
+      publishListScroll(max > 0 ? Math.min(1, Math.max(0, scrollPos / max)) : 0)
+    }
   }
 
+  // Slider drags scroll the list; only meaningful for the top dock.
+  useEffect(() => {
+    if (!isHorizontal) return
+    return subscribeSliderDrag((ratio) => {
+      const el = listRef.current
+      if (!el) return
+      if (axisIsHorizontal) {
+        el.scrollLeft = ratio * (el.scrollWidth - el.clientWidth)
+      } else {
+        el.scrollTop = ratio * (el.scrollHeight - el.clientHeight)
+      }
+    })
+  }, [isHorizontal, axisIsHorizontal])
+
+  // The browser owns scroll timing/interruption. No custom easing clock or RAF.
+  // Respect the app's reduced-motion setting; both dock axes behave alike.
   const scrollToTop = () => {
     playButtonClickSound()
-    if (listRef.current) {
-      filterScrollMap.current[typeFilter] = { top: 0, left: 0 }
-      if (isHorizontal) {
-        listRef.current.scrollTo({ left: 0, behavior: 'smooth' })
-      } else {
-        listRef.current.scrollTo({ top: 0, behavior: 'smooth' })
-      }
-    }
+    const el = listRef.current
+    if (!el) return
+    filterScrollMap.current[typeFilter] = { top: 0, left: 0 }
+    if (axisIsHorizontal) el.scrollTo({ left: 0, behavior: reduceMotion ? 'instant' : 'smooth' })
+    else el.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' })
+  }
+  const scrollToEnd = () => {
+    playButtonClickSound()
+    const el = listRef.current
+    if (!el) return
+    if (axisIsHorizontal) el.scrollTo({ left: el.scrollWidth - el.clientWidth, behavior: reduceMotion ? 'instant' : 'smooth' })
+    else el.scrollTo({ top: el.scrollHeight - el.clientHeight, behavior: reduceMotion ? 'instant' : 'smooth' })
   }
 
   useEffect(() => {
     const el = listRef.current
-    if (!el || !isHorizontal) return
+    if (!el || !axisIsHorizontal) return
     const onWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         e.preventDefault()
@@ -312,7 +386,7 @@ export function ItemList() {
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
-  }, [isHorizontal])
+  }, [axisIsHorizontal])
 
   const startScrolling = () => {
     if (scrollRaf.current !== null) return
@@ -337,7 +411,7 @@ export function ItemList() {
 
       if (listRef.current) {
         const step = cur * (dt / 16)
-        if (isHorizontal) {
+        if (axisIsHorizontal) {
           listRef.current.scrollLeft += step
         } else {
           listRef.current.scrollTop += step
@@ -375,8 +449,8 @@ export function ItemList() {
     const rect = getListRect()
     if (!rect) return
 
-    const pos = isHorizontal ? e.clientX - rect.left : e.clientY - rect.top
-    const len = isHorizontal ? rect.width : rect.height
+    const pos = axisIsHorizontal ? e.clientX - rect.left : e.clientY - rect.top
+    const len = axisIsHorizontal ? rect.width : rect.height
     // Base 5px/frame so the scroll feels alive the moment the zone is
     // entered (the old +2 crawled at ~120px/s across most of the zone).
     const speedFor = (d: number) => Math.max(0, 1 - d / EDGE_ENTER) * MAX_SCROLL_PX + 5
@@ -451,6 +525,130 @@ export function ItemList() {
     el.animate([{ opacity: 0.45 }, { opacity: 1 }], { duration: 120, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' })
   }, [filterKey, hasStack])
 
+  // ── Row-change FLIP ─────────────────────────────────────────────────────
+  // Cards keep their identity and fly from their old position to the new
+  // layout (the half-visible 5th card in 1-row glides into row 2's start;
+  // cards beyond it follow). Positions are measured in CONTENT space (rect
+  // Preserve actual painted screen coordinates. Switching multi-row ->
+  // single-row clamps scrollTop to zero DURING the same React commit; the
+  // former content-relative FLIP mistakenly added the old scrollTop back
+  // to the start position, making all visible cards jump by that distance.
+  // Viewport rects also survive a live mid-flight reversal.
+  const flipSnap = useRef<Map<string, { x: number; y: number; w: number; h: number }> | null>(null)
+  const flipAnchor = useRef<{ id: string; x: number; y: number; wasHorizontal: boolean; wasScrolled: boolean } | null>(null)
+  const cardVisualPos = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect()
+    return { x: r.left, y: r.top, w: r.width, h: r.height }
+  }
+  useEffect(() => {
+    return dockFlip.bind(() => {
+      const list = listRef.current
+      if (!list) return
+      const snap = new Map<string, { x: number; y: number; w: number; h: number }>()
+      list.querySelectorAll<HTMLElement>('.list-stack .item').forEach((el) => {
+        const id = el.querySelector<HTMLElement>('.item-main')?.dataset.id
+        if (id) snap.set(id, cardVisualPos(el))
+      })
+      flipSnap.current = snap
+
+      // When a scrolled multi-row list becomes a single horizontal strip,
+      // retain the card the user is actually viewing. Without this anchor,
+      // visible cards can fly thousands of pixels to an off-screen target in
+      // 420ms; their first frame is continuous, but the gesture looks jumpy.
+      const wasHorizontal = !list.classList.contains('multi-row') && list.classList.contains('horizontal')
+      const wasScrolled = wasHorizontal ? list.scrollLeft > 60 : list.scrollTop > 60
+      const visibleCards: Array<{ id: string; x: number; y: number }> = []
+      if (wasScrolled) {
+        const lr = list.getBoundingClientRect()
+        list.querySelectorAll<HTMLElement>('.recent-section > .item').forEach((el) => {
+          const id = el.querySelector<HTMLElement>('.item-main')?.dataset.id
+          if (!id) return
+          const r = el.getBoundingClientRect()
+          const iw = Math.max(0, Math.min(r.right, lr.right) - Math.max(r.left, lr.left))
+          const ih = Math.max(0, Math.min(r.bottom, lr.bottom) - Math.max(r.top, lr.top))
+          if (r.width <= 0 || r.height <= 0 || iw * ih < r.width * r.height * 0.40) return
+          // Keep the first substantially visible row/column as a spatial
+          // landmark, not the center-most card: centering later rows causes
+          // the earlier visible row to fly off the other edge on collapse.
+          visibleCards.push({ id, x: r.left, y: r.top })
+        })
+      }
+      visibleCards.sort((a, b) =>
+        Math.abs(a.y - b.y) > 3 ? a.y - b.y : a.x - b.x
+      )
+      const leadingCard = visibleCards[0]
+      flipAnchor.current = leadingCard
+        ? { ...leadingCard, wasHorizontal, wasScrolled }
+        : null
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    const list = listRef.current
+    const snap = flipSnap.current
+    if (!list || !snap) return
+    flipSnap.current = null
+    const anchor = flipAnchor.current
+    flipAnchor.current = null
+    // Only transfer the scroll anchor when changing scroll AXES and when
+    // the user was already away from the beginning. New/top views still
+    // open from the normal newest-first position.
+    if (anchor && anchor.wasHorizontal !== axisIsHorizontal && anchor.wasScrolled) {
+      const node = Array.from(list.querySelectorAll<HTMLElement>('.recent-section > .item'))
+        .find(el => el.querySelector<HTMLElement>('.item-main')?.dataset.id === anchor.id)
+      if (node) {
+        const r = node.getBoundingClientRect()
+        if (axisIsHorizontal) list.scrollLeft += r.left - anchor.x
+        else list.scrollTop += r.top - anchor.y
+      }
+    }
+    if (reduceMotion || typeof list.animate !== 'function') return
+    list.querySelectorAll<HTMLElement>('.list-stack .item').forEach((el) => {
+      const id = el.querySelector<HTMLElement>('.item-main')?.dataset.id
+      if (!id) return
+      const from = snap.get(id)
+      if (!from) return // card born in the new layout — no flight
+      // Retarget from the card's LIVE painted position captured above.
+      // Cancel the previous FLIP before measuring the NEW layout endpoint:
+      // getBoundingClientRect() still includes an old WAAPI transform until
+      // cancellation, so measuring "to" first causes a reversal snap.
+      // Do not cancel opacity/copy-ripple animations.
+      for (const a of el.getAnimations()) {
+        const effect = a.effect as KeyframeEffect | null
+        const frames = (effect?.getKeyframes?.() ?? []) as Array<Record<string, unknown>>
+        if (frames.some((f) => typeof f.transform === 'string' && f.transform !== 'none')) a.cancel()
+      }
+      const to = cardVisualPos(el)
+      const viewport = list.getBoundingClientRect()
+      // Do not animate cards that are offscreen at BOTH endpoints. A scrolled
+      // 3-row -> 1-row switch can move a virtualized card by 2000+px while
+      // its entire trajectory remains clipped; these wasted composited
+      // flights inflate motion metrics and compete with visible card work.
+      const canSee = (p: typeof to) =>
+        p.x + p.w > viewport.left - 8 &&
+        p.x < viewport.right + 8 &&
+        p.y + p.h > viewport.top - 8 &&
+        p.y < viewport.bottom + 8
+      if (!canSee(from) && !canSee(to)) return
+      const dx = from.x - to.x
+      const dy = from.y - to.y
+      // Stack expansion can change the tile's own width (210 -> 254px+).
+      // Animate it visually with a horizontal FLIP scale, while flexbox
+      // reflows ONCE to the target width. Never tween CSS width each frame:
+      // that would repeatedly wrap all neighboring cards.
+      const scaleX = isHorizontal && to.w > 0 ? from.w / to.w : 1
+      const resize = Math.abs(from.w - to.w) > 1 && isHorizontal
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && !resize) return
+      el.animate(
+        [
+          { transform: `translate(${dx}px, ${dy}px)${resize ? ` scaleX(${scaleX})` : ''}`, transformOrigin: 'left top' },
+          { transform: 'none', transformOrigin: 'left top' }
+        ],
+        { duration: DOCK_MOTION.durationMs, easing: easingWaapi() }
+      )
+    })
+  }, [dockRows, reduceMotion, pinned, recent, expandedStackId, axisIsHorizontal])
+
   // Cards in or near the list's view are marked data-near and always drawn
   // (item.css); the rest stay culled by content-visibility: auto. Left to
   // content-visibility alone, the top dock painted its cards as empty boxes
@@ -470,7 +668,7 @@ export function ItemList() {
         }
       },
       // one view either side, along the list's own direction
-      { root: list, rootMargin: isHorizontal ? '0px 100% 0px 100%' : '100% 0px 100% 0px' }
+      { root: list, rootMargin: axisIsHorizontal ? '0px 100% 0px 100%' : '100% 0px 100% 0px' }
     )
     const watched = new Set<Element>()
     const sync = () => {
@@ -485,16 +683,31 @@ export function ItemList() {
       added.disconnect()
       near.disconnect()
     }
-  }, [hasStack, isHorizontal])
+  }, [hasStack, isHorizontal, axisIsHorizontal])
+
+  // Re-sync the slider after axis/layout/content changes and on first mount
+  // (the scroll event alone won't fire when the list shrinks or rebuilds).
+  useEffect(() => {
+    const el = listRef.current
+    if (!el || !isHorizontal) return
+    const scrollPos = axisIsHorizontal ? el.scrollLeft : el.scrollTop
+    const max = axisIsHorizontal
+      ? el.scrollWidth - el.clientWidth
+      : el.scrollHeight - el.clientHeight
+    publishListScroll(max > 0 ? Math.min(1, Math.max(0, scrollPos / max)) : 0)
+  }, [isHorizontal, axisIsHorizontal, typeFilter, query, total])
 
   return (
     <div
-      className={`list${isHorizontal ? ' horizontal' : ''}`}
+      className={`list${isHorizontal ? ' horizontal' : ''}${multiRow ? ' multi-row' : ''}`}
+      id="cv-dock-list"
       ref={listRef}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDragLeaveOrDrop}
       onScroll={handleScroll}
+      onPointerMove={handleCornerHover}
+      onPointerLeave={() => setCornerHover(false)}
     >
       {total === 0 ? (
         <EmptyState filtered={query.trim().length > 0} />
@@ -534,9 +747,13 @@ export function ItemList() {
                   height={11}
                   className="pinned-pill-arrow"
                   style={{
-                    transform: isHorizontal
-                      ? (pinnedCollapsed ? 'rotate(-90deg)' : 'rotate(90deg)')
-                      : (pinnedCollapsed ? 'rotate(0deg)' : 'rotate(180deg)')
+                    // Multi-row expands/collapses downward, so the chevron
+                    // speaks vertically there like the side dock's pill.
+                    transform: multiRow
+                      ? (pinnedCollapsed ? 'rotate(0deg)' : 'rotate(180deg)')
+                      : isHorizontal
+                        ? (pinnedCollapsed ? 'rotate(-90deg)' : 'rotate(90deg)')
+                        : (pinnedCollapsed ? 'rotate(0deg)' : 'rotate(180deg)')
                   }}
                 />
               </button>
@@ -558,36 +775,59 @@ export function ItemList() {
         </div>
       )}
 
-      <AnimatePresence>
-        {showScrollTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
-            transition={{ duration: reduceMotion ? 0.01 : 0.14, ease: 'easeOut' }}
-            className={`scroll-top-btn${isHorizontal ? ' horizontal' : ''}`}
-            onClick={scrollToTop}
-            title={t('item.scrollToTop')}
-            aria-label={t('item.scrollToTop')}
-          >
-            {isHorizontal ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="18 15 12 9 6 15"></polyline>
-              </svg>
-            )}
-          </motion.button>
-        )}
-      </AnimatePresence>
-
+        <AnimatePresence>
+          {(showScrollTop || cornerHover) && (
+            <motion.button
+              key="scroll-top"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.14, ease: 'easeOut' }}
+              className={`scroll-top-btn${isHorizontal ? ' horizontal' : ''}`}
+              onClick={scrollToTop}
+              title={t('item.scrollToTop')}
+              aria-label={t('item.scrollToTop')}
+            >
+              {axisIsHorizontal ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+              )}
+            </motion.button>
+          )}
+          {isHorizontal && (showScrollTop || cornerHover) && (
+            <motion.button
+              key="scroll-end"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: reduceMotion ? 0.01 : 0.14, ease: 'easeOut' }}
+              className={`scroll-end-btn${isHorizontal ? ' horizontal' : ''}`}
+              onClick={scrollToEnd}
+              title={t('item.scrollToEnd')}
+              aria-label={t('item.scrollToEnd')}
+            >
+              {axisIsHorizontal ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              )}
+            </motion.button>
+          )}
+        </AnimatePresence>
       <AnimatePresence>
         {backSpot && (
           <BackButton
             key="back-button"
-            horizontal={isHorizontal}
+            horizontal={axisIsHorizontal}
             reduceMotion={reduceMotion}
             label={t('item.backToSpot')}
             onBack={goBack}

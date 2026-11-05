@@ -52,6 +52,9 @@ function merge(base: Settings, patch: Partial<Settings>): Settings {
   out.skippedUpdateVersion = undefined
   // a hand-edited or odd value never hides the tour or shows it forever
   if (typeof out.onboardingVersion !== 'number' || !Number.isFinite(out.onboardingVersion)) out.onboardingVersion = undefined
+  // Migrate existing two-row preferences to the only expanded state (three rows).
+  out.dockRows = Number(out.dockRows) > 1 ? 3 : 1
+  delete (out as unknown as Record<string, unknown>).dockRowsExpanded
   return out
 }
 

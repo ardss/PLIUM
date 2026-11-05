@@ -212,11 +212,47 @@ const ClipboardItemBase = forwardRef<HTMLDivElement, Props>(({ item }, ref) => {
     setExpandedFlag(false)
   }, [setExpandedFlag])
 
+  // Large clipboard texts are kept on disk; the renderer only has a 300-char
+  // preview. Warm the full payload on hover rather than dragging a truncated key.
+  const fullDragTextRef = useRef<{ id: string; text: string } | null>(null)
+  const loadingDragTextRef = useRef<string | null>(null)
+  const warmDragText = useCallback(() => {
+    if (item.data.kind !== 'text' || !item.data.hasFullPayload) return
+    if (fullDragTextRef.current?.id === item.id || loadingDragTextRef.current === item.id) return
+    const id = item.id
+    loadingDragTextRef.current = id
+    void window.edge.getFullText(id).then((text) => {
+      if (loadingDragTextRef.current === id && typeof text === 'string' && text.length > 0) fullDragTextRef.current = { id, text }
+    }).catch(() => {}).finally(() => {
+      if (loadingDragTextRef.current === id) loadingDragTextRef.current = null
+    })
+  }, [item.data, item.id])
+
   const handleDragStart = useCallback((e: React.DragEvent, req: DragRequest) => {
     if (item.data.kind === 'text') {
-      // We no longer support dragging text/links.
-      // Prevent the default browser drag behavior (e.g. text selection dragging) entirely.
-      e.preventDefault()
+      // Native HTML text drag: target input receives characters, not a .txt file.
+      // Never substitute the shortened renderer DTO for a full-length payload.
+      const text = item.data.hasFullPayload
+        ? (fullDragTextRef.current?.id === item.id ? fullDragTextRef.current.text : null)
+        : item.data.text
+      if (text === null) {
+        e.preventDefault()
+        warmDragText()
+        return
+      }
+      e.dataTransfer.effectAllowed = 'copy'
+      e.dataTransfer.setData('text/plain', text)
+      // Keep the existing card's visible surface as the OS drag ghost.
+      // The payload is still plain text, never a temporary .txt file.
+      const card = e.currentTarget.closest<HTMLElement>('.item') ?? e.currentTarget
+      const rect = card.getBoundingClientRect()
+      e.dataTransfer.setDragImage(
+        card,
+        Math.round(Math.max(0, Math.min(rect.width, e.clientX - rect.left))),
+        Math.round(Math.max(0, Math.min(rect.height, e.clientY - rect.top)))
+      )
+      window.edge.setTextDragActive(true)
+      setInternalDragReq(req)
       return
     } else {
       // Images and files need OS-level file handles via Electron's startDrag.
@@ -228,13 +264,13 @@ const ClipboardItemBase = forwardRef<HTMLDivElement, Props>(({ item }, ref) => {
       setInternalDragReq(req)
       startDrag(req)
     }
-  }, [item.data, startDrag, setInternalDragReq])
+  }, [item.data, item.id, startDrag, setInternalDragReq, warmDragText])
 
   const handlePrestage = useCallback(() => {
-    if (item.data.kind !== 'text' && !isPreviewing) {
-      window.edge.prestageDrag({ id: item.id })
-    }
-  }, [item.data.kind, isPreviewing, item.id])
+    if (isPreviewing) return
+    if (item.data.kind === 'text') warmDragText()
+    else window.edge.prestageDrag({ id: item.id })
+  }, [item.data.kind, isPreviewing, item.id, warmDragText])
 
   const pointerStartRef = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   const wasPreviewingRef = useRef(false)
@@ -348,7 +384,7 @@ const ClipboardItemBase = forwardRef<HTMLDivElement, Props>(({ item }, ref) => {
       <div
         className={`item-main${isPreviewing ? ' force-actions previewing' : ''}`}
         data-id={item.id}
-        draggable={!isPreviewing && item.data.kind !== 'text' && (!isBundle || !expanded)}
+        draggable={!isPreviewing && (!isBundle || !expanded)}
         onMouseEnter={handlePrestage}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -358,6 +394,11 @@ const ClipboardItemBase = forwardRef<HTMLDivElement, Props>(({ item }, ref) => {
           handleDragStart(e, { id: item.id })
         }}
         onDragEnd={() => {
+          if (item.data.kind === 'text') {
+            window.edge.setTextDragActive(false)
+            // Do not retain long private text payloads after the gesture.
+            fullDragTextRef.current = null
+          }
           setInternalDragReq(null)
         }}
         onDragOver={(e) => {
@@ -1407,20 +1448,18 @@ function StackExpandSwap({
 }) {
   const reduceMotion = useStore((s) => !!s.settings.reduceMotion)
   if (reduceMotion) return <>{expanded ? panel : deck}</>
-  // Enter-only animation: the outgoing side unmounts instantly and the
-  // incoming side fades/slides in. No exit overlap — keeping an exiting
-  // panel in flow balloons the card (panel height + deck height) then snaps,
-  // which is exactly what made closing feel broken.
+  // The outgoing content is removed from layout immediately: never put two
+  // image-heavy panels in flow or the card's height doubles for one frame.
+  // CSS-owned entry stays at >=88% opacity, preventing a blank frame when the
+  // deck/panel switches, and avoids Motion's occasional end-of-tween opacity
+  // reset (observed by the per-frame Dock motion audit).
   return (
-    <motion.div
+    <div
       key={expanded ? panelKey : deckKey}
-      className={expanded ? 'stack-expand-panel' : 'stack-collapse-deck'}
-      initial={{ opacity: 0, y: expanded ? -10 : 0 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: expanded ? 0.22 : 0.15, ease: 'easeOut' }}
+      className={expanded ? 'stack-expand-panel stack-enter-panel' : 'stack-collapse-deck stack-enter-deck'}
     >
       {expanded ? panel : deck}
-    </motion.div>
+    </div>
   )
 }
 

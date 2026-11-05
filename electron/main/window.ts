@@ -25,6 +25,7 @@ import { isSafeExternalUrl } from './externalUrl'
 import { WorkAreaCache } from './workAreaCache'
 import { probeSeamAware, isNearProximity, type SeamTickState } from './stickProbe'
 import { loadSettings, saveSettings } from '../store/settings'
+import { dockBladeHeight } from '../../shared/types'
 import { isFullscreenAppActive, registerFullscreenActiveListener } from './fullscreen'
 import { noteUiMotion } from './thumbnailCache'
 import { isExternalDragActive } from './externalDrag'
@@ -673,6 +674,9 @@ function getStickGeometry(): { x: number; y: number; width: number; height: numb
   }))
 
   const currentWindowWidth = previewActive ? 820 : PANEL_WIDTH
+  // Top dock: window height follows the configured row count so the blade is
+  // never clipped (and multi-row mode is fully visible).
+  const currentWindowHeight = dockBladeHeight(settings.dockRows ?? 1)
 
   const result = computeStickBounds({
     position: settings.stickPosition,
@@ -681,6 +685,7 @@ function getStickGeometry(): { x: number; y: number; width: number; height: numb
     savedWorkArea: settings.stickDisplayWorkArea,
     savedScaleFactor: settings.stickDisplayScaleFactor,
     windowWidth: currentWindowWidth,
+    windowHeight: currentWindowHeight,
     horizontalOffset: settings.horizontalOffset,
     currentBounds: getMainWindow()?.getBounds(),
     previewActive

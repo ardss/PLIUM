@@ -759,7 +759,7 @@ rect.dashed-outline-shape {
 .list.horizontal .list-stack {
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: var(--dock-gap, 10px);
   height: 146px;
 }
 .list.horizontal .pinned-section {
@@ -774,9 +774,17 @@ rect.dashed-outline-shape {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: var(--dock-gap, 10px);
   margin: 0;
   height: 146px;
+}
+
+/* During single-row/multi-row axis switches the hidden pinned width must
+   snap to its new layout immediately. The card FLIP performs the visible
+   movement; otherwise the accordion finishes its width tween later and
+   the whole Recent row jumps 430px in the final 80ms. */
+[data-dock-axis-transition] .list.horizontal .pinned-accordion.horizontal {
+  transition: none !important;
 }
 
 /* Horizontal Pinned Accordion Drawer — Smooth width transition */
@@ -789,8 +797,7 @@ rect.dashed-outline-shape {
   overflow: hidden;
   margin-right: 0;
   flex-shrink: 0;
-  transition: width 0.24s cubic-bezier(0.16, 1, 0.3, 1), max-width 0.24s cubic-bezier(0.16, 1, 0.3, 1), margin-right 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: width, max-width;
+  transition: width 0.32s cubic-bezier(0.2, 0.78, 0.2, 1), max-width 0.32s cubic-bezier(0.2, 0.78, 0.2, 1), margin-right 0.32s cubic-bezier(0.2, 0.78, 0.2, 1);
 }
 
 .pinned-accordion.horizontal.is-expanded {
@@ -812,7 +819,7 @@ rect.dashed-outline-shape {
   transform: translateX(-8px);
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.24s ease;
+  transition: opacity 0.23s ease, transform 0.32s cubic-bezier(0.2, 0.78, 0.2, 1), visibility 0s linear 0.32s;
 }
 
 .pinned-accordion.horizontal.is-expanded .pinned-accordion-inner {
@@ -820,6 +827,7 @@ rect.dashed-outline-shape {
   transform: translateX(0);
   visibility: visible;
   pointer-events: auto;
+  transition: opacity 0.24s ease 0.04s, transform 0.32s cubic-bezier(0.2, 0.78, 0.2, 1), visibility 0s;
 }
 
 /* Horizontal Floating Pinned Pill */
@@ -879,7 +887,7 @@ rect.dashed-outline-shape {
   display: block;
   color: rgba(255, 255, 255, 0.6);
   flex-shrink: 0;
-  transition: color 0.14s ease, transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: color 0.14s ease, transform 0.32s cubic-bezier(0.2, 0.78, 0.2, 1);
 }
 
 .pinned-floating-pill.horizontal:hover .pinned-pill-arrow {
@@ -913,7 +921,7 @@ rect.dashed-outline-shape {
 
 .list.horizontal .recent-section .recent-label-text {
   writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  text-orientation: upright; /* CJK label reads top to bottom. */
   font-size: calc(9.5px * var(--font-scale, 1));
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -1570,4 +1578,311 @@ rect.dashed-outline-shape {
 .copy-ind.is-reduced .tick-draw {
   stroke-dashoffset: 0;
   transition: none;
+}
+
+/* ═══ Multi-row top dock (2-3 rows) ═══════════════════════════════════════
+   With dockRows > 1 the card area wraps into several rows and scrolls
+   vertically; the header and search stay untouched. The stack becomes a
+   plain column whose sections span the full width, so each section's own
+   flex-wrap packs its cards into rows (sections themselves must never be
+   wide flex items, or they overflow instead of wrapping). */
+.list.horizontal.multi-row {
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  align-items: stretch;
+  /* Keep the same card-area padding as the single-row Dock. The scrubber
+     is a thin overlay anchored just beyond the rightmost card column. */
+  padding-right: 14px;
+}
+.list.horizontal.multi-row .list-stack {
+  flex-direction: column;
+  align-items: stretch;
+  height: auto;
+  gap: var(--dock-gap, 10px);
+  /* The card columns + left pin tab + right scrubber form ONE centered
+     unit beneath the unchanged header. Empty width is split evenly. */
+  width: min(100%, var(--dock-content-width, 100%));
+  margin-inline: auto;
+}
+.list.horizontal.multi-row .pinned-section {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  height: auto;
+  width: 100%;
+  gap: var(--dock-gap, 10px);
+}
+.list.horizontal.multi-row .recent-section {
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  height: auto;
+  width: 100%;
+  gap: var(--dock-gap, 10px);
+}
+/* Multi-row pinned drawer: animate its HEIGHT, not its width.
+   The old 0px -> 100% width tween rewrapped pinned cards mid-flight,
+   briefly making a 146px drawer 302px tall and jerking Recent downward.
+   The grid track is an intrinsic-height, interruptible 0fr -> 1fr reveal. */
+.list.horizontal.multi-row .pinned-accordion.horizontal,
+.list.horizontal.multi-row .pinned-accordion.horizontal.is-expanded {
+  display: grid;
+  grid-template-rows: 0fr;
+  width: calc(100% - 34px);
+  min-width: 0;
+  max-width: calc(100% - 34px);
+  height: auto;
+  min-height: 0;
+  margin-left: 34px;
+  margin-right: 0;
+  overflow: hidden;
+  transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.78, 0.2, 1);
+}
+.list.horizontal.multi-row .pinned-accordion.horizontal.is-expanded {
+  grid-template-rows: 1fr;
+}
+.list.horizontal.multi-row .pinned-accordion.horizontal .pinned-accordion-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
+  height: auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-7px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.2, 0.78, 0.2, 1), visibility 0s linear 0.32s;
+}
+.list.horizontal.multi-row .pinned-accordion.horizontal.is-expanded .pinned-accordion-inner {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.23s ease 0.04s, transform 0.32s cubic-bezier(0.2, 0.78, 0.2, 1), visibility 0s;
+}
+/* Multi-row pinned adaptation: the floating pill becomes a left-edge rail
+   tab (same visual language as the single-row dock's vertical labels)
+   instead of claiming a whole nearly-empty row. */
+.list.horizontal.multi-row .pinned-section {
+  position: relative;
+  height: auto;
+  margin-bottom: 0;
+  transition: margin-bottom 0.32s cubic-bezier(0.2, 0.78, 0.2, 1);
+}
+/* Cancel the stack's row gap when the drawer is closed; the expanding grid
+   track pushes Recent smoothly instead of teleporting it at click time. */
+.list.horizontal.multi-row .pinned-section:has(.pinned-accordion:not(.is-expanded)) {
+  margin-bottom: calc(-1 * var(--dock-gap, 10px));
+}
+.list.horizontal.multi-row .pinned-floating-pill.horizontal {
+  position: absolute;
+  left: 0;
+  top: 2px; /* align the pinned toggle with the top of the first card row */
+  margin: 0;
+}
+[data-motion="reduce"] .list.horizontal.multi-row .pinned-section,
+[data-motion="reduce"] .list.horizontal.multi-row .pinned-accordion.horizontal,
+[data-motion="reduce"] .list.horizontal.multi-row .pinned-accordion.horizontal .pinned-accordion-inner {
+  transition: none !important;
+}
+.list.horizontal.multi-row .list-stack:has(.pinned-section) .recent-section {
+  margin-left: 34px;
+  /* Margin reserves the pin tab inside the centered width, not beyond it. */
+  width: calc(100% - 34px);
+}
+/* The vertical "recent" rail is meaningless once cards flow in rows. */
+.list.horizontal.multi-row .recent-section .section-label.recent-header {
+  display: none;
+}
+.list.horizontal.multi-row .recent-section .item {
+  margin-left: 0;
+}
+
+/* ═══ Header scroll slider ════════════════════════════════════════════════
+   Thin groove + draggable ball filling the gap between the centered search
+   box (fixed 300px, absolutely centered) and the right-side count group.
+   Always horizontal; maps 0..1 onto the list's scroll axis. */
+.header-scroll-slider-zone {
+  position: absolute;
+  /* search half-width (150) + its gutters */
+  left: calc(50% + 170px);
+  /* clear the count capsule + clear/settings buttons + padding */
+  right: 200px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  z-index: 90;
+  pointer-events: none;
+}
+.header-scroll-slider-zone .dock-scroll-slider {
+  pointer-events: auto;
+}
+.dock-scroll-slider {
+  position: relative;
+  width: 100%;
+  height: 26px;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dock-scroll-slider.is-dragging {
+  cursor: grabbing;
+}
+.dock-scroll-slider-groove {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.14s ease;
+}
+.dock-scroll-slider:hover .dock-scroll-slider-groove,
+.dock-scroll-slider.is-dragging .dock-scroll-slider-groove {
+  background: rgba(255, 255, 255, 0.24);
+}
+.dock-scroll-slider-ball {
+  position: absolute;
+  left: 0;
+  top: calc(50% - 5px);
+  width: 10px;
+  height: 10px;
+  will-change: transform; /* positioned by transform: translateX only */
+  pointer-events: none;
+}
+/* Visual on an inner element so the hover scale never fights the
+   per-frame translateX written inline on the wrapper. */
+.dock-scroll-slider-ball-dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease;
+}
+.dock-scroll-slider:hover .dock-scroll-slider-ball-dot,
+.dock-scroll-slider.is-dragging .dock-scroll-slider-ball-dot {
+  transform: scale(1.15);
+}
+
+/* ═══ Bottom-center dock expand handle ════════════════════════════════════
+   Toggles the card shelf between folded and expanded states. */
+.dock-expand-handle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 2px;
+  width: 72px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  z-index: 300;
+}
+/* Resting bar is a REAL solid rounded bar; the chevron is born flat
+   (squashed) and unfolds on hover while the bar shrinks away — the fold
+   reads as one motion, and the resting state shows no V-shaped artifact. */
+.dock-expand-handle-bar {
+  position: absolute;
+  width: var(--dock-bar-w, 44px);
+  height: var(--dock-bar-h, 4px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  transform: scaleX(1);
+  transform-origin: center;
+  transition: transform var(--dock-fold-ms, 200ms) var(--dock-ease, cubic-bezier(0.22, 1, 0.36, 1)), opacity 0.14s ease;
+}
+.dock-expand-handle:hover .dock-expand-handle-bar,
+.dock-expand-handle:focus-visible .dock-expand-handle-bar {
+  transform: scaleX(0.42);
+  opacity: 0.25;
+}
+.dock-expand-handle-arrow {
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 0;
+  transform: scaleX(3.2) scaleY(0.24) rotate(var(--dock-handle-flip, 0deg));
+  transition: transform var(--dock-fold-ms, 200ms) var(--dock-ease, cubic-bezier(0.22, 1, 0.36, 1)), opacity 0.1s ease;
+}
+.dock-expand-handle:hover .dock-expand-handle-arrow,
+.dock-expand-handle:focus-visible .dock-expand-handle-arrow {
+  opacity: 1;
+  transform: scaleX(1) scaleY(1) rotate(var(--dock-handle-flip, 0deg));
+  /* No bob animation here: an infinite transform keyframe would override
+     the in-progress fold transition and cause a visible snap at 200ms. */
+}
+[data-motion="reduce"] .dock-expand-handle:hover .dock-expand-handle-arrow,
+[data-motion="reduce"] .dock-expand-handle:focus-visible .dock-expand-handle-arrow {
+  animation: none;
+  transform: scale(1) rotate(var(--dock-handle-flip, 0deg));
+}
+[data-motion="reduce"] .dock-expand-handle-arrow,
+[data-motion="reduce"] .dock-expand-handle-bar {
+  transition: opacity 0.14s ease; /* fold snaps; the color feedback stays */
+}
+[data-motion="reduce"] .dock-scroll-slider .dock-scroll-slider-ball-dot {
+  transition: none;
+}
+
+/* One semantic expand/collapse action in the dock header. */
+.dock-layout-control {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  margin-left: 3px;
+}
+.dock-layout-separator {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.dock-layout-toggle {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-card, #141414);
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, scale 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.dock-layout-toggle:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+.dock-layout-toggle:active { scale: 0.94; }
+.dock-layout-toggle:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+.dock-layout-chevron {
+  flex-shrink: 0;
+  transition: transform var(--dock-fold-ms, 200ms) var(--dock-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+.dock-layout-chevron.is-expanded { transform: rotate(180deg); }
+[data-motion="reduce"] .dock-layout-chevron { transition: none; }
+@media (max-width: 960px) {
+  .header-search-center .search input { width: 240px; }
+}
+@media (max-width: 850px) {
+  .dock-layout-control { display: none; }
+}
+@media (max-width: 760px) {
+  .header-search-center .search input { width: 200px; }
 }

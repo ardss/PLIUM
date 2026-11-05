@@ -240,6 +240,35 @@ export interface Settings {
   v026UpgradeCleaned?: boolean
   /** Configurable global hotkey accelerator to toggle Edge-Drop shelf (e.g. 'Alt+C', 'Alt+Shift+C'). Default: 'Alt+C'. */
   toggleHotkey?: string
+  /** Top dock states: 1 = compact horizontal; 3 = expanded vertical. */
+  dockRows?: number
+}
+
+/** Card height of one dock row (px). Kept in sync with .list.horizontal card sizing. */
+export const DOCK_CARD_HEIGHT = 146
+/** Vertical gap between dock rows in multi-row mode (px). */
+export const DOCK_ROW_GAP = 12
+/** Header height of the horizontal dock blade (px). */
+export const DOCK_HEADER_HEIGHT = 46
+/** Shared duration for renderer CSS height tween and native window shrink. */
+export const DOCK_ANIMATION_DURATION_MS = 420
+
+/**
+ * Total blade (and Electron window) height for the top dock at a given row
+ * count. The single-row dock keeps its original 4px visual slack.
+ * The expanded dock fills 522px: 46px header, 6/8px padding,
+ * three 146px cards and two 12px gaps.
+ */
+export function dockBladeHeight(rows: number): number {
+  const r = Math.min(3, Math.max(1, Math.round(rows) || 1))
+  return (
+    DOCK_HEADER_HEIGHT +
+    6 /* .list.horizontal padding-top */ +
+    r * DOCK_CARD_HEIGHT +
+    (r - 1) * DOCK_ROW_GAP +
+    8 /* .list.horizontal padding-bottom */ +
+    (r === 1 ? 4 : 0) /* compact bar slack */
+  )
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -276,7 +305,8 @@ export const DEFAULT_SETTINGS: Settings = {
   updateMode: 'auto',
   skippedUpdateVersion: undefined,
   language: 'system',
-  toggleHotkey: 'Alt+C'
+  toggleHotkey: 'Alt+C',
+  dockRows: 1
 }
 
 

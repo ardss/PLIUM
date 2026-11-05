@@ -18,7 +18,7 @@ describe('cards in view stay drawn while the shelf is closed', () => {
 
   it('marks cards near the view measured against the list, not the window (the closed clip does not touch it)', () => {
     expect(list).toContain('new IntersectionObserver(')
-    expect(list).toContain("{ root: list, rootMargin: isHorizontal ? '0px 100% 0px 100%' : '100% 0px 100% 0px' }")
+    expect(list).toContain("{ root: list, rootMargin: axisIsHorizontal ? '0px 100% 0px 100%' : '100% 0px 100% 0px' }")
     expect(list).toContain("if (e.isIntersecting) e.target.setAttribute('data-near', '')")
     expect(list).toContain("else e.target.removeAttribute('data-near')")
   })

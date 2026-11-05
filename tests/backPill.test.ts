@@ -19,9 +19,9 @@ describe('reopen at the top, never silently', () => {
   it('remembers the card at the leading edge when the shelf closes, so going back lands on it even after new copies', () => {
     expect(list).toMatch(/if \(!isNowOpen && lastOpen\) \{[\s\S]{0,500}closedSpot\.current = captureSpot\(\)/)
     expect(list).toContain("const card = hit?.closest('.list .item-main') as HTMLElement | null")
-    expect(list).toMatch(/target = \(isHorizontal \? el\.scrollLeft \+ at\.left - box\.left : el\.scrollTop \+ at\.top - box\.top\) - spot\.offset/)
+    expect(list).toMatch(/target = \(axisIsHorizontal \? el\.scrollLeft \+ at\.left - box\.left : el\.scrollTop \+ at\.top - box\.top\) - spot\.offset/)
     // nothing to go back to within half a view of the top
-    expect(list).toContain('if (pos < (isHorizontal ? el.clientWidth : el.clientHeight) / 2) return null')
+    expect(list).toContain('if (pos < (axisIsHorizontal ? el.clientWidth : el.clientHeight) / 2) return null')
   })
 
   it('is offered for 6 seconds, held while the pointer is on it', () => {

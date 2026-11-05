@@ -7,10 +7,11 @@ function read(relPath: string): string {
 }
 
 describe('Horizontal Card Shelf Settings Layout', () => {
-  it('Panel.tsx retains fixed 210px dock height in horizontal mode without expanding and with 60px gutter', () => {
+  it('Panel.tsx sizes the dock by row count (1 row = the classic 210px) in horizontal mode with 60px gutter', () => {
     const panelSrc = read('src/components/Panel.tsx')
-    expect(panelSrc).toContain("style={isHorizontal ? { width: 'min(calc(100vw - 60px), 1080px)', height: 210 } : { height: panelHeightStr }}")
+    expect(panelSrc).toContain("height: dockAnimH")
     expect(panelSrc).not.toContain('height: settingsOpen ? 460 : 210')
+    expect(read('shared/types.ts')).toMatch(/export function dockBladeHeight[\s\S]*?DOCK_HEADER_HEIGHT/)
   })
 
   it('Panel.tsx renders horizontal curved connector arcs (flares) for top position', () => {
@@ -285,18 +286,20 @@ it('Settings rows are monochrome: no icon tiles or accent colours', () => {
 
   it('ItemList renders scroll-to-start arrow button with directional left chevron in horizontal dock mode', () => {
     const itemListSrc = read('src/components/ItemList.tsx')
-    expect(itemListSrc).toContain('showScrollTop && (')
+    // Revealed by scrolling OR by hovering the corner where the buttons live.
+    expect(itemListSrc).toContain('(showScrollTop || cornerHover) && (')
     expect(itemListSrc).toContain('className={`scroll-top-btn${isHorizontal ? \' horizontal\' : \'\'}`}')
-    expect(itemListSrc).toContain('points="15 18 9 12 15 6"') // Left chevron in horizontal
-    expect(itemListSrc).toContain('points="18 15 12 9 6 15"') // Up chevron in vertical
+    expect(itemListSrc).toContain('points="15 18 9 12 15 6"') // Left chevron (single-row horizontal axis)
+    expect(itemListSrc).toContain('points="18 15 12 9 6 15"') // Up chevron in vertical / multi-row
     expect(itemListSrc).toContain('playButtonClickSound()')
 
     const itemCss = read('src/styles/item.css')
     expect(itemCss).toContain('.scroll-top-btn.horizontal')
+    expect(itemCss).toContain('right: 88px') // left slot; jump-to-end takes the right slot (44px)
     expect(itemCss).toContain('right: 44px')
     expect(itemCss).toContain('bottom: 16px')
     // Crisp solid fill instead of backdrop blur (4K sharpness, zero raster cost).
-    expect(itemCss).toMatch(/\.scroll-top-btn \{[^}]*background: var\(--act-surface\);/)
+    expect(itemCss).toMatch(/\.scroll-top-btn,\s*\n\.scroll-end-btn \{[^}]*background: var\(--act-surface\);/)
     expect(itemCss).not.toContain('backdrop-filter')
   })
 

@@ -23,7 +23,7 @@ import { startDragOut, resolveDragData, prestageDrag, stageDragFile, formatClipb
 import { setOwnDragActive } from './externalDrag'
 import { clipboardSignature, formatTabularDataForClipboard, signatureMatchesItem } from '../clipboard/formats'
 import * as clipboard from '../clipboard/osClipboard'
-import type { ClipboardItem, ItemData, MergeResult } from '../../shared/types'
+import { DOCK_ANIMATION_DURATION_MS, type ClipboardItem, type ItemData, type MergeResult } from '../../shared/types'
 import { quitAndInstallUpdate, checkForUpdatesManual, startUpdateDownload, syncAutoUpdaterState, getCachedUpdateState, triggerBackgroundCheck } from './updater'
 import { createId } from '../store/ids'
 import { isStoreBuild } from './config'
@@ -37,6 +37,11 @@ export { isStoreBuild }
 
 /** Longest text item:copy-text accepts (a derived link / color / path list). */
 export const COPY_TEXT_MAX = 100_000
+
+// One pending resize, shared across settings patches. If a new row/edge
+// change arrives mid-animation the old resize is cancelled.
+let pendingDockShrinkResize: ReturnType<typeof setTimeout> | undefined
+let textDragSafetyTimer: ReturnType<typeof setTimeout> | undefined
 
 /**
  * Returns true if the current system clipboard content matches the given item data.
@@ -763,6 +768,7 @@ export function registerIpc(): void {
         }
       }
     }
+    const previousSettings = loadSettings()
     let next = saveSettings(enrichedPatch)
     if (patch.launchAtLogin !== undefined) {
       const applied = await applyLaunchAtLogin(patch.launchAtLogin)
@@ -781,8 +787,29 @@ export function registerIpc(): void {
     if (patch.incognito !== undefined) {
       getWatcher().setPaused(patch.incognito)
     }
-    if (patch.stickPosition !== undefined || patch.stickDisplayId !== undefined || patch.verticalOffset !== undefined || patch.horizontalOffset !== undefined) {
-      repositionWindow()
+    if (patch.stickPosition !== undefined || patch.stickDisplayId !== undefined || patch.verticalOffset !== undefined || patch.horizontalOffset !== undefined || patch.dockRows !== undefined) {
+      if (pendingDockShrinkResize !== undefined) {
+        clearTimeout(pendingDockShrinkResize)
+        pendingDockShrinkResize = undefined
+      }
+      // On collapse, preserve the tall native window while cards and blade
+      // reflow *together*. Only shrink the OS window when they have landed.
+      // On expansion (or edge changes) grow the OS window immediately.
+      const collapsingTopDock =
+        patch.dockRows !== undefined &&
+        patch.stickPosition === undefined &&
+        previousSettings.stickPosition === 'top' &&
+        next.stickPosition === 'top' &&
+        (next.dockRows ?? 1) < (previousSettings.dockRows ?? 1) &&
+        !next.reduceMotion
+      if (collapsingTopDock) {
+        pendingDockShrinkResize = setTimeout(() => {
+          pendingDockShrinkResize = undefined
+          repositionWindow()
+        }, DOCK_ANIMATION_DURATION_MS + 80)
+      } else {
+        repositionWindow()
+      }
       if (patch.stickPosition !== undefined || patch.stickDisplayId !== undefined) {
         popUpAndRetract(1500)
       }
@@ -940,6 +967,24 @@ export function registerSendListeners(): void {
       // 'usage' reason: this push is bookkeeping from a manual drag-out, so
       // the renderer must NOT flash the capture copy-indicator for it.
       pushState.items({ reason: 'usage' })
+    }
+  })
+
+  // Chromium owns HTML text drag. Suppress the window's topmost heartbeat
+  // until dragend; keep the native file drag handler unchanged.
+  on('item:text-drag-active', (_sender, active) => {
+    if (textDragSafetyTimer) clearTimeout(textDragSafetyTimer)
+    setOwnDragActive(active)
+    setHeartbeatPaused(active)
+    if (active) {
+      // Dragend may not fire if the renderer crashes mid-gesture.
+      textDragSafetyTimer = setTimeout(() => {
+        textDragSafetyTimer = undefined
+        setOwnDragActive(false)
+        setHeartbeatPaused(false)
+      }, 30_000)
+    } else {
+      textDragSafetyTimer = undefined
     }
   })
 

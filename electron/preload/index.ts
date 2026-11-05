@@ -204,6 +204,7 @@ const api = {
     send('item:start-drag', req)
   },
   prestageDrag: (req: DragRequest) => send('item:prestage-drag', req),
+  setTextDragActive: (active: boolean) => send('item:text-drag-active', active),
   addFiles: (paths: string[]) => invoke('item:add-files', paths),
   addItemData: (data: import('../../shared/types').ItemData) => invoke('item:add-data', data),
   removeSubitem: (req: import('../../shared/types').DragRequest) => invoke('item:remove-subitem', req),

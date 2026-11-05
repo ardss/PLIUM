@@ -27,6 +27,10 @@ import { useFilteredItems } from '../hooks/useFilteredItems'
 import { registerEdgeDragCue } from '../lib/edgeDrag'
 import { DashedOutline } from './DashedOutline'
 import { isKept } from '../../shared/itemMeta'
+import { dockBladeHeight } from '../../shared/types'
+import { DOCK_MOTION, dockMotionVars, chevronPoints, chevronStroke } from '../lib/dockMotion'
+import { dockFlip } from '../lib/dockFlipBus'
+import { playButtonClickSound } from '../lib/soundEffects'
 
 import { useTranslation } from '../i18n'
 
@@ -57,6 +61,7 @@ const SHELF_CLOSE_MOTION =
 
 export function Panel() {
   const open = useStore((s) => s.open)
+  const { t } = useTranslation()
   const { pinned, recent } = useFilteredItems()
   const filteredItems = useMemo(() => [...pinned, ...recent], [pinned, recent])
   const filteredCount = filteredItems.length
@@ -68,6 +73,57 @@ export function Panel() {
   const query = useStore((s) => s.query)
 
   const settings = useStore((s) => s.settings)
+  const patchSettings = useStore((s) => s.patchSettings)
+  const reduceMotion = !!settings.reduceMotion
+  // ── Row-count height choreography ────────────────────────────────────────
+  // The blade height animates; the Electron window cannot. So growth commits
+  // the window FIRST (the new area is transparent, invisible) and then the
+  // blade tweens up; shrink tweens the blade down and commits the window only
+  // when it lands — shrinking first would clip the animation mid-flight.
+  const [dockAnimH, setDockAnimH] = useState(() => dockBladeHeight(settings.dockRows ?? 1))
+  const dockAnimHRef = useRef(dockAnimH)
+  const animateDockH = (h: number) => {
+    dockAnimHRef.current = h
+    setDockAnimH(h)
+  }
+  // The visual row reflow and blade height change must start together.
+  // Main-process settings:update delays shrinking the *native* Electron
+  // window until this visual transition ends, avoiding clipping on collapse.
+  const axisTransitionTimerRef = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (axisTransitionTimerRef.current !== null) clearTimeout(axisTransitionTimerRef.current)
+    document.documentElement.removeAttribute('data-dock-axis-transition')
+  }, [])
+  const commitRows = (rows: number) => {
+    const previous = useStore.getState().settings.dockRows ?? 1
+    if ((previous > 1) !== (rows > 1)) {
+      // A collapsed pinned accordion is full-width in multi-row mode but
+      // zero-width in single-row mode. Letting CSS transition that invisible
+      // width delays the recent-section reflow by ~350ms, making visible
+      // cards jump 430px AFTER their FLIP. Snap the hidden accordion width
+      // immediately when switching scroll axes; FLIP animates the cards.
+      document.documentElement.setAttribute('data-dock-axis-transition', '1')
+      if (axisTransitionTimerRef.current !== null) clearTimeout(axisTransitionTimerRef.current)
+      axisTransitionTimerRef.current = window.setTimeout(() => {
+        document.documentElement.removeAttribute('data-dock-axis-transition')
+        axisTransitionTimerRef.current = null
+      }, DOCK_MOTION.durationMs + 80)
+    }
+    dockFlip.capture()
+    void patchSettings({ dockRows: rows === 3 ? 3 : 1 })
+  }
+  // When the committed height changes elsewhere (launch, sync), follow it:
+  // snap down (the window is already there), tween up on the next frame.
+  useEffect(() => {
+    const target = dockBladeHeight(settings.dockRows ?? 1)
+    const cur = dockAnimHRef.current
+    if (target === cur) return
+    if (target > cur && !reduceMotion) {
+      const raf = requestAnimationFrame(() => animateDockH(target))
+      return () => cancelAnimationFrame(raf)
+    }
+    animateDockH(target)
+  }, [settings.dockRows, reduceMotion])
   const settingsOpen = useStore((s) => s.settingsOpen)
   const setSettingsOpen = useStore((s) => s.setSettingsOpen)
   const setQuery = useStore((s) => s.setQuery)
@@ -322,7 +378,6 @@ export function Panel() {
   if (isVisuallyOpen) containerClass += ' is-open'
   if (isTransitioning) containerClass += ' is-transitioning'
 
-  const reduceMotion = !!settings.reduceMotion
   if (reduceMotion) containerClass += ' reduce-motion'
   // The transition is read from the new style, so picking it by the target
   // state gives the open spring on open and the close spring on close.
@@ -572,10 +627,55 @@ export function Panel() {
         <div
           ref={bladeRef}
           className="blade"
-          style={isHorizontal ? { width: 'min(calc(100vw - 60px), 1080px)', height: 210 } : { height: panelHeightStr }}
+          style={isHorizontal
+            ? {
+                width: 'min(calc(100vw - 60px), 1080px)',
+                height: dockAnimH,
+                transition: reduceMotion
+                  ? undefined
+                  : `height ${DOCK_MOTION.durationMs}ms ${DOCK_MOTION.easing}`,
+                ...dockMotionVars()
+              }
+            : { height: panelHeightStr }}
         >
+          {isHorizontal && (
+            <button
+              type="button"
+              className="dock-expand-handle"
+              onClick={() => {
+                playButtonClickSound()
+                commitRows((settings.dockRows ?? 1) === 1 ? 3 : 1)
+              }}
+              title={t((settings.dockRows ?? 1) > 1 ? 'item.collapse' : 'item.expand')}
+              aria-label={t((settings.dockRows ?? 1) > 1 ? 'item.collapse' : 'item.expand')}
+              aria-expanded={(settings.dockRows ?? 1) > 1}
+            >
+              {/* Resting state is a real solid bar (a squashed chevron reads as
+                  a kinked dashed line). On hover the bar shrinks away while
+                  the chevron unfolds from flat — the fold feel, no artifact. */}
+              <span className="dock-expand-handle-bar" />
+              {/* Hover cue: toggle direction — down while collapsed (expand),
+                  up while expanded (collapse back to one row). */}
+              <svg
+                className="dock-expand-handle-arrow"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={chevronStroke(DOCK_MOTION.barH)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                style={{ '--dock-handle-flip': (settings.dockRows ?? 1) > 1 ? '180deg' : '0deg' } as React.CSSProperties}
+              >
+                <polyline points={chevronPoints(DOCK_MOTION.foldDeg)}></polyline>
+              </svg>
+            </button>
+          )}
           <Header
             isHorizontal={isHorizontal}
+            onDockRowsChange={isHorizontal ? commitRows : undefined}
             itemCount={filteredCount}
             clearProps={{
               items: filteredItems,

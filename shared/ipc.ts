@@ -216,6 +216,8 @@ export interface SendMap {
   'item:start-drag': { args: [req: DragRequest] }
   /** Pre-stage drag file and warm icon in background before drag begins. */
   'item:prestage-drag': { args: [req: DragRequest] }
+  /** Bracket browser-native plain text drag so topmost heartbeat does not hide its ghost. */
+  'item:text-drag-active': { args: [active: boolean] }
   /** Synchronize tutorial step */
   'tutorial:set-step': { args: [step: number] }
   /**

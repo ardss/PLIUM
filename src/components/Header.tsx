@@ -4,6 +4,7 @@ import { GearIcon, CloseIcon, InfoIcon, ClockIcon, TypeIcon, LinkIcon, ImageIcon
 import { playButtonClickSound } from '../lib/soundEffects'
 import { loadEmojiCatalog } from '../lib/emoji/load'
 import { ShelfSearch } from './ShelfSearch'
+import { ScrollSlider } from './ScrollSlider'
 import { EmojiCategoryBar } from './EmojiCategoryBar'
 
 import { useTranslation } from '../i18n'
@@ -13,6 +14,8 @@ import type { ClipboardItemDto, TypeFilter } from '../../shared/types'
 export interface HeaderProps {
   isHorizontal?: boolean
   itemCount?: number
+  /** Delegate to Panel so both controls use one native-window transition. */
+  onDockRowsChange?: (rows: 1 | 3) => void
   clearProps?: {
     items: ClipboardItemDto[]
     disabled: boolean
@@ -22,7 +25,7 @@ export interface HeaderProps {
   }
 }
 
-export function Header({ isHorizontal = false, itemCount, clearProps }: HeaderProps = {}) {
+export function Header({ isHorizontal = false, itemCount, clearProps, onDockRowsChange }: HeaderProps = {}) {
   const isStoreBuild = useStore((s) => s.isStoreBuild)
   const { t } = useTranslation()
   const setSettingsOpen = useStore((s) => s.setSettingsOpen)
@@ -64,6 +67,8 @@ export function Header({ isHorizontal = false, itemCount, clearProps }: HeaderPr
     { id: 'colors', label: t('filters.colors') || 'Colors', Icon: PaletteIcon }
   ]
 
+  const dockIsExpanded = (settings.dockRows ?? 1) > 1
+  const dockActionLabel = t(dockIsExpanded ? 'item.collapse' : 'item.expand')
   const reduceMotion = !!settings.reduceMotion
   const headerFade = `opacity ${reduceMotion ? '0.01s' : '0.16s'} ease`
 
@@ -142,6 +147,38 @@ export function Header({ isHorizontal = false, itemCount, clearProps }: HeaderPr
           >
             <EmojiSmileIcon width={14} height={14} />
           </button>
+          {isHorizontal && !emojiOpen && onDockRowsChange && (
+            <div className="dock-layout-control">
+              <span className="dock-layout-separator" aria-hidden="true" />
+              <button
+                type="button"
+                className="dock-layout-toggle"
+                aria-label={dockActionLabel}
+                title={dockActionLabel}
+                aria-expanded={dockIsExpanded}
+                tabIndex={settingsOpen ? -1 : undefined}
+                onClick={() => {
+                  playButtonClickSound()
+                  onDockRowsChange(dockIsExpanded ? 1 : 3)
+                }}
+              >
+                <svg
+                  className={'dock-layout-chevron' + (dockIsExpanded ? ' is-expanded' : '')}
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3.5 6L8 10.5L12.5 6" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
         {isHorizontal ? (
           <div
@@ -224,6 +261,12 @@ export function Header({ isHorizontal = false, itemCount, clearProps }: HeaderPr
       {isHorizontal && !settingsOpen && emojiOpen && (
         <div className="header-search header-search-center">
           <EmojiCategoryBar isHorizontal={true} />
+        </div>
+      )}
+      {/* The same header slider controls the active axis in both Dock states. */}
+      {isHorizontal && !settingsOpen && !emojiOpen && (
+        <div className="header-scroll-slider-zone">
+          <ScrollSlider />
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, paddingRight: 2, position: 'relative', zIndex: 260 }}>

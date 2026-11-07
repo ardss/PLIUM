@@ -15,7 +15,7 @@ export interface HeaderProps {
   isHorizontal?: boolean
   itemCount?: number
   /** Delegate to Panel so both controls use one native-window transition. */
-  onDockRowsChange?: (rows: 1 | 2 | 3) => void
+  onDockRowsChange?: (rows: 1 | 3) => void
   clearProps?: {
     items: ClipboardItemDto[]
     disabled: boolean
@@ -67,9 +67,9 @@ export function Header({ isHorizontal = false, itemCount, clearProps, onDockRows
     { id: 'colors', label: t('filters.colors') || 'Colors', Icon: PaletteIcon }
   ]
 
-  const nextDockRows = ((settings.dockRows ?? 1) >= 3 ? 1 : (settings.dockRows ?? 1) + 1) as 1 | 2 | 3
+  const nextDockRows: 1 | 3 = (settings.dockRows ?? 1) > 1 ? 1 : 3
   const dockIsExpanded = (settings.dockRows ?? 1) > 1
-  const dockActionLabel = `${t(nextDockRows === 1 ? 'item.collapse' : 'item.expand')} · ${nextDockRows}/3`
+  const dockActionLabel = t(nextDockRows === 1 ? 'item.collapse' : 'item.expand')
   const reduceMotion = !!settings.reduceMotion
   const headerFade = `opacity ${reduceMotion ? '0.01s' : '0.16s'} ease`
 

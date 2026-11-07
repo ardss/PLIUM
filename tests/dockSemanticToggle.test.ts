@@ -9,8 +9,11 @@ const panel = readFileSync(join(root, 'src/components/Panel.tsx'), 'utf8')
 const css = readFileSync(join(root, 'src/styles/panel.css'), 'utf8')
 
 describe('dock expand/collapse semantics', () => {
-  it('cycles a single compact action through 1/2/3 rows', () => {
+  it('toggles the accepted compact 1-row and expanded 3-row layouts', () => {
     expect(header).toContain('className="dock-layout-toggle"')
+    expect(header).toContain('const nextDockRows: 1 | 3 = (settings.dockRows ?? 1) > 1 ? 1 : 3')
+    expect(panel).toContain('commitRows((settings.dockRows ?? 1) > 1 ? 1 : 3)')
+    expect(header).not.toContain('1 | 2 | 3')
     expect(header).toContain("const dockActionLabel =")
     expect(header).not.toContain('dock-layout-seg')
     expect(header).not.toContain("value: '1', lines: 1")

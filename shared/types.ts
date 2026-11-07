@@ -260,7 +260,7 @@ export const DOCK_ANIMATION_DURATION_MS = 420
  * three 146px cards and two 12px gaps.
  */
 export function dockBladeHeight(rows: number): number {
-  const r = Math.min(3, Math.max(1, Math.round(rows) || 1))
+  const r = Number.isFinite(rows) && rows > 1 ? 3 : 1
   return (
     DOCK_HEADER_HEIGHT +
     6 /* .list.horizontal padding-top */ +

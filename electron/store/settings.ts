@@ -52,8 +52,10 @@ function merge(base: Settings, patch: Partial<Settings>): Settings {
   out.skippedUpdateVersion = undefined
   // a hand-edited or odd value never hides the tour or shows it forever
   if (typeof out.onboardingVersion !== 'number' || !Number.isFinite(out.onboardingVersion)) out.onboardingVersion = undefined
-  // Keep a user-selected 1, 2, or 3 rows while clamping corrupted settings.
-  out.dockRows = Math.min(3, Math.max(1, Math.round(Number(out.dockRows) || 1)))
+  // Only two approved layouts: 1 row folded or 3 rows expanded.
+  // Upgrade any legacy 2-row setting to 3 rows; preserve 1 row unchanged.
+  const rows = Number(out.dockRows)
+  out.dockRows = Number.isFinite(rows) && rows > 1 ? 3 : 1
   delete (out as unknown as Record<string, unknown>).dockRowsExpanded
   return out
 }

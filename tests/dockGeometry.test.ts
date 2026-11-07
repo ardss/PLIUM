@@ -6,6 +6,7 @@ describe('Dock window/renderer geometry', () => {
   it('keeps the original one-row and three-row native heights', () => {
     expect(dockBladeHeight(1)).toBe(210)
     expect(dockBladeHeight(3)).toBe(522)
+    expect(dockBladeHeight(2)).toBe(522) // migrate legacy 2-row layout to 3-row
   })
 
   it('shares row spacing and transition duration across window and renderer', () => {

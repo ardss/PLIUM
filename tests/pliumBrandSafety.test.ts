@@ -34,10 +34,10 @@ describe('PLIUM brand/upgrade safety gates', () => {
       expect(existsSync(join(root, name))).toBe(true)
     }
   })
-  it('preserves 1, 2 and 3-row geometry', () => {
-    expect(dockBladeHeight(1)).toBeLessThan(dockBladeHeight(2))
-    expect(dockBladeHeight(2)).toBeLessThan(dockBladeHeight(3))
-    expect(read('electron/store/settings.ts')).toContain('Math.min(3, Math.max(1, Math.round(Number(out.dockRows) || 1)))')
-    expect(read('src/components/Panel.tsx')).toContain('commitRows((settings.dockRows ?? 1) >= 3 ? 1')
+  it('keeps only 1-row and 3-row geometry, promoting legacy 2 rows', () => {
+    expect(dockBladeHeight(1)).toBeLessThan(dockBladeHeight(3))
+    expect(dockBladeHeight(2)).toBe(dockBladeHeight(3))
+    expect(read('electron/store/settings.ts')).toContain('Number.isFinite(rows) && rows > 1 ? 3 : 1')
+    expect(read('src/components/Panel.tsx')).toContain('commitRows((settings.dockRows ?? 1) > 1 ? 1 : 3')
   })
 })

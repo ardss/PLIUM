@@ -182,7 +182,7 @@ function getTrayText(settingsLang: string | undefined, key: keyof typeof en['tra
           console.log('[Main] Context menu "Show Clipboard" clicked')
           setVisible(true)
           getMainWindow()?.focus()
-          pushState.togglePanel()
+          pushState.togglePanel(true)
         }
       },
       {
@@ -191,6 +191,7 @@ function getTrayText(settingsLang: string | undefined, key: keyof typeof en['tra
           console.log('[Main] Context menu "Settings" clicked')
           setVisible(true)
           getMainWindow()?.focus()
+          pushState.togglePanel(true)
           pushState.openSettings()
         }
       },
@@ -247,21 +248,23 @@ function getTrayText(settingsLang: string | undefined, key: keyof typeof en['tra
     tray?.setContextMenu(menu)
   }
 
-  tray.on('click', () => {
+  // Both click and double-click MUST be idempotent. Windows sends two click
+  // events for a double-click; toggling would open and instantly close again.
+  const showFromTray = () => {
     updateTrayIcon()
-    console.log('[Main] Tray icon left-clicked')
     const win = getMainWindow()
-    if (!win) return
+    if (!win || win.isDestroyed()) return
     setVisible(true)
-    pushState.togglePanel()
-  })
+    win.focus()
+    pushState.togglePanel(true)
+  }
+  tray.on('click', showFromTray)
+  tray.on('double-click', showFromTray)
 
-  // Rebuild menu dynamically right before showing to ensure displays & checkmarks are 100% current.
-  tray.on('right-click', () => {
-    updateTrayIcon()
-    rebuild()
-    tray?.popUpContextMenu()
-  })
+  // setContextMenu() above already registers the native Windows right-click
+  // handler. Calling popUpContextMenu() again in a second right-click listener
+  // could immediately dismiss the menu (and leave Quit inaccessible).
+  // The menu is rebuilt on settings and display changes via rebuildTrayMenu().
 
   // Listen for display changes to keep tray context menu updated in real-time (register once).
   if (!screenListenersRegistered) {

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 function read(relPath: string): string {
-  return readFileSync(resolve(__dirname, '..', relPath), 'utf8')
+  return readFileSync(resolve(__dirname, '..', relPath), 'utf8').replace(/\r\n?/g, '\n')
 }
 
 describe('Horizontal Card Shelf Settings Layout', () => {
@@ -86,7 +86,7 @@ describe('Horizontal Card Shelf Settings Layout', () => {
   it('Appearance lists the Copy Indicator toggle first, then the Indicator Style flyout trigger (both docks)', () => {
     const src = read('src/components/Settings.tsx')
     const appearance = src.slice(src.indexOf('// appearance'))
-    const toggleIdx = appearance.indexOf("id: 'copy-indicator',\n            title")
+    const toggleIdx = appearance.search(/id: 'copy-indicator',\s+title:/)
     const styleIdx = appearance.indexOf("id: 'indicator-style'")
     expect(toggleIdx).toBeGreaterThan(-1)
     expect(styleIdx).toBeGreaterThan(toggleIdx)
@@ -204,7 +204,7 @@ describe('Horizontal Card Shelf Settings Layout', () => {
     const support = cards.slice(0, cards.indexOf('data-card="about"'))
     const about = cards.slice(cards.indexOf('data-card="about"'))
     expect(support).toContain("t('footer.supportTagline')")
-    expect(support).toContain("<span>{t('footer.supportOnKofi')}</span>")
+    expect(support).toContain('<span>PLIUM 开源代码</span>')
     expect(support).not.toContain("t('footer.supportDev')")
     expect(support).toContain("<span>{t('footer.starOnGithub')}</span>")
     expect(about).toContain("t('groups.aboutEdgeDrop')")

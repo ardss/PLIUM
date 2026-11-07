@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8')
+const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8').replace(/\r\n?/g, '\n')
 const css = read('src/styles/item.css')
 const tokens = read('src/styles/tokens.css')
 const flyout = read('src/components/PreviewFlyout.tsx')

@@ -5,7 +5,7 @@ import type { ClipboardItemDto } from '../shared/types'
 import { fileStackEntries, imageCollectionEntries, stackOpenWidth, stackTotalSize } from '../src/components/StackItems'
 import { getFileKind } from '../src/lib/fileType'
 
-const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8')
+const read = (p: string) => readFileSync(join(__dirname, '..', p), 'utf8').replace(/\r\n?/g, '\n')
 const t = (k: string) => ({ 'filters.images': 'Images', 'item.copyFilePath': 'Copy file path', 'item.copy': 'Copy' } as Record<string, string>)[k] ?? k
 
 const files = {

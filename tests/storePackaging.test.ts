@@ -1,212 +1,101 @@
 import { describe, expect, it } from 'vitest'
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { STORE_STARTUP_TASK_ID } from '../electron/main/config'
 
 const root = join(__dirname, '..')
+const read = (rel: string) => readFileSync(join(root, rel), 'utf8')
+const pkg = JSON.parse(read('package.json'))
 
-function read(rel: string): string {
-  return readFileSync(join(root, rel), 'utf8')
-}
-
-describe('GitHub vs Store packaging contracts (on-disk, not assumed)', () => {
-  const pkg = JSON.parse(read('package.json')) as {
-    scripts: Record<string, string>
-    dependencies: Record<string, string>
-    devDependencies: Record<string, string>
-    build: {
-      asarUnpack: string[]
-      extraResources?: Array<{ from: string; to: string }>
-      files?: string[]
-      appx: {
-        identityName: string
-        publisher: string
-        applicationId: string
-        displayName: string
-        capabilities: string[]
-        customExtensionsPath: string
-        addAutoLaunchExtension?: boolean
-      }
-      publish: { provider: string; owner: string; repo: string }
-      nsis: { artifactName: string }
+/**
+ * PLIUM is a separate NSIS preview product, not an upstream Edge-Drop Store
+ * repackage. These are release gates, not an excuse to enable upstream feeds.
+ */
+describe('PLIUM shipping contracts', () => {
+  it('has independent package identity and is not a public npm package', () => {
+    expect(pkg.name).toBe('plium')
+    expect(pkg.private).toBe(true)
+    expect(pkg.license).toBe('Apache-2.0')
+    expect(pkg.build.appId).toBe('com.ardss.plium')
+    expect(pkg.build.productName).toBe('PLIUM')
+  })
+  it('distributes NSIS x64 only and does not impersonate upstream Store', () => {
+    expect(pkg.build.win.target).toEqual([{ target: 'nsis', arch: ['x64'] }])
+    expect(pkg.build.appx).toBeUndefined()
+    expect(pkg.build.publish).toBeUndefined()
+  })
+  it('does not offer fake Microsoft Store / MSIX distribution', () => {
+    for (const script of ['build:store','build:msix']) {
+      expect(pkg.scripts[script]).toContain('disabled')
+      expect(pkg.scripts[script]).toContain('process.exit(1)')
+      expect(pkg.scripts[script]).not.toContain('--win appx')
     }
-  }
-
-  it('stamps buildTarget=github on the NSIS script and buildTarget=store on the AppX scripts', () => {
+  })
+  it('GitHub-style NSIS packaging remains local and explicitly names the target', () => {
     expect(pkg.scripts['build:github']).toContain('--win nsis')
-    expect(pkg.scripts['build:github']).toContain('buildTarget=github')
-    expect(pkg.scripts['build:store']).toContain('--win appx')
-    expect(pkg.scripts['build:store']).toContain('buildTarget=store')
-    expect(pkg.scripts['build:msix']).toContain('--win appx')
-    expect(pkg.scripts['build:msix']).toContain('buildTarget=store')
     expect(pkg.scripts['build:win']).toBe('npm run build:github')
+    expect(pkg.build.nsis.artifactName).toBe('PLIUM-Setup-${version}.${ext}')
+    expect(pkg.build.nsis.perMachine).toBe(false)
+    expect(pkg.build.nsis.allowToChangeInstallationDirectory).toBe(true)
   })
-
-  it('declares the Store identity and required capabilities', () => {
-    expect(pkg.build.appx.identityName).toBe('Deepender.EdgeDrop')
-    expect(pkg.build.appx.publisher).toMatch(/^CN=/)
-    expect(pkg.build.appx.applicationId).toBe('EdgeDrop')
-    expect(pkg.build.appx.capabilities).toEqual(expect.arrayContaining(['runFullTrust', 'internetClient']))
-    expect(pkg.build.appx.capabilities).not.toContain('broadFileSystemAccess')
+  it('does not inherit an upstream update publisher or update URL', () => {
+    expect(pkg.build.publish).toBeUndefined()
+    const updater = read('electron/main/updater.ts')
+    expect(updater).not.toContain('api.github.com')
+    expect(updater).not.toContain('checkForUpdates()')
+    expect(updater).not.toContain('downloadUpdate(')
+    expect(updater).toContain('preview updates are disabled')
   })
-
-  it('points customExtensionsPath at a file that actually exists', () => {
-    const rel = pkg.build.appx.customExtensionsPath
-    expect(rel).toBeTruthy()
-    expect(existsSync(join(root, rel))).toBe(true)
+  it('uses independently branded application and tray icons', () => {
+    expect(pkg.build.win.icon).toBe('resources/icon.ico')
+    expect(existsSync(join(root, 'resources/icon.ico'))).toBe(true)
+    expect(existsSync(join(root, 'resources/icon.png'))).toBe(true)
+    expect(existsSync(join(root, 'resources/tray.png'))).toBe(true)
+    expect(existsSync(join(root, 'resources/tray-dark.png'))).toBe(true)
+    expect(read('src/assets/logo.svg')).toContain('<svg')
   })
-
-  it('does not enable electron-builder SlackStartup auto-launch (we own the TaskId)', () => {
-    expect(pkg.build.appx.addAutoLaunchExtension).not.toBe(true)
-    expect(pkg.dependencies['electron-winstore-auto-launch']).toBeUndefined()
-    expect(pkg.dependencies['@nodert-win10-au/windows.applicationmodel']).toBeUndefined()
+  it('has appropriate NSIS shortcuts', () => {
+    expect(pkg.build.nsis.shortcutName).toContain('PLIUM')
+    expect(pkg.build.nsis.createDesktopShortcut).toBe(true)
+    expect(pkg.build.nsis.createStartMenuShortcut).toBe(true)
   })
-
-  it('ships the windowless StartupTask helper outside the asar', () => {
-    expect(pkg.build.files).toEqual(expect.arrayContaining(['!resources/startup/**/*.exe']))
-    expect(pkg.build.extraResources).toEqual(expect.arrayContaining([
-      { from: 'resources/startup/EdgeDropStartup.exe', to: 'startup/EdgeDropStartup.exe' }
-    ]))
-    expect(existsSync(join(root, 'resources/startup/EdgeDropStartup.exe'))).toBe(true)
-    expect(existsSync(join(root, 'resources/startup/EdgeDropStartup.cs'))).toBe(true)
+  it('does not bundle the upstream store startup executable', () => {
+    expect(pkg.build.extraResources.some((x: { from: string }) => /EdgeDropStartup/i.test(x.from))).toBe(false)
+    expect(pkg.build.files).toContain('!resources/startup/**/*.exe')
+    expect(pkg.build.files).toContain('!resources/appx/**')
   })
-
-  it('keeps only runtime packages as production dependencies', () => {
+  it('keeps only required runtime packages in production', () => {
     expect(Object.keys(pkg.dependencies).sort()).toEqual([
-      '@resvg/resvg-js',
-      'electron-updater',
-      'koffi',
-      'react',
-      'zustand'
+      '@resvg/resvg-js', 'electron-updater', 'koffi', 'react', 'zustand'
     ])
   })
-
-  it('does not pack README media, Store tiles, or the full Twemoji npm tree into the asar', () => {
+  it('excludes build-only libraries and source packages from production', () => {
     expect(pkg.build.files).toEqual(expect.arrayContaining([
-      '!out/renderer/**/*.gif',
-      // TypeScript writes its own output and caches to out/ts (tsconfig composite outDir); `out/**/*`
-      // shipped that stale copy of the main-process code in every package up to 0.3.3
-      '!out/ts/**',
-      '!resources/appx/**',
-      '!resources/startup/**/*.cs',
+      '!out/renderer/**/*.gif', '!out/ts/**', '!resources/appx/**',
       '!**/node_modules/emoji-datasource-twitter/**',
-      '!**/node_modules/gsap/**',
-      '!**/node_modules/framer-motion/**',
-      '!**/node_modules/@fontsource/**',
-      '!**/node_modules/react-dom/**'
+      '!**/node_modules/framer-motion/**', '!**/node_modules/react-dom/**'
     ]))
-    // Icons are vendored Phosphor paths (src/components/phosphorPaths.ts): no icon package at all.
-    for (const dep of ['lucide-react', '@phosphor-icons/react', '@iconify/react', '@iconify-json/cuida']) {
-      expect({ ...pkg.dependencies, ...pkg.devDependencies }[dep]).toBeUndefined()
-    }
-    expect(pkg.build.appx.customExtensionsPath).toBe('resources/appx/startup-extensions.xml')
-    expect(existsSync(join(root, 'resources/appx/startup-extensions.xml'))).toBe(true)
   })
-
-  it('ships Twemoji 64px as extraResources for GitHub and Store builds', () => {
-    expect(pkg.build.extraResources).toEqual(expect.arrayContaining([
-      { from: 'node_modules/emoji-datasource-twitter/img/twitter/64', to: 'emoji/64' }
-    ]))
-    expect(existsSync(join(root, 'node_modules/emoji-datasource-twitter/img/twitter/64'))).toBe(true)
+  it('bundles Twemoji assets without bundling its entire source package', () => {
+    expect(pkg.build.extraResources).toContainEqual({
+      from: 'node_modules/emoji-datasource-twitter/img/twitter/64', to: 'emoji/64'
+    })
     expect(pkg.devDependencies['emoji-datasource-twitter']).toBeTruthy()
   })
-
-  it('ships no onboarding videos (the tour plays the real app) and keeps README images out of the pack', () => {
-    const publicFiles = existsSync(join(root, 'public')) ? readdirSync(join(root, 'public')) : []
-    expect(publicFiles.filter((name) => name.endsWith('.webm'))).toEqual([])
-    const readmeDir = join(root, '.github/readme')
-    for (const name of [
-      'banner.gif',
-      'open.gif',
-      'positions.gif',
-      'copy.gif',
-      'drag-in-out.gif',
-      'stacks.gif',
-      'preview.gif',
-      'notes-search.gif',
-      'kofi-qr.png',
-      'upi-sponsor-qr.png'
-    ]) {
-      expect(existsSync(join(readmeDir, name))).toBe(true)
-    }
-    const readme = read('README.md')
-    expect(readme).toContain('.github/readme/banner.gif')
-    expect(readme).toContain('.github/readme/open.gif')
-    expect(readme).toContain('.github/readme/kofi-qr.png')
-    expect(readme).toContain('.github/readme/upi-sponsor-qr.png')
-    // every image the README shows from the repo is there
-    const local = [...readme.matchAll(/src="(\.github\/readme\/[^"]+)"/g)].map((m) => m[1])
-    expect(local.length).toBeGreaterThan(10)
-    expect(local.filter((path) => !existsSync(join(root, path)))).toEqual([])
-    expect(readme).not.toMatch(/src="public\/[^"]+\.(gif|png)"/)
-    expect(readme).not.toContain('/main/public/')
-  })
-
-  it('unpacks native addons the Store package must load from disk', () => {
-    const unpack = pkg.build.asarUnpack.join('\n')
+  it('unpacks native modules', () => {
+    const unpack = pkg.build.asarUnpack.join(' ')
     expect(unpack).toMatch(/koffi/)
     expect(unpack).toMatch(/@resvg/)
     expect(unpack).toMatch(/\{node,dll\}/)
   })
-
-  it('keeps GitHub Releases as the NSIS publish source and NSIS artifact name', () => {
-    expect(pkg.build.publish).toEqual({
-      provider: 'github',
-      owner: 'Deepender25',
-      repo: 'Edge-Drop'
-    })
-    expect(pkg.build.nsis.artifactName).toContain('${version}')
-    expect(pkg.build.nsis.artifactName).toMatch(/\.\$\{ext\}$/)
+  it('keeps application data outside the archive', () => {
+    expect(pkg.build.files).toContain('out/**/*')
+    expect(pkg.build.files).toContain('package.json')
+    expect(read('electron/store/paths.ts')).toContain("app.getPath('userData')")
   })
-
-  it('StartupTask XML uses the same TaskId as STORE_STARTUP_TASK_ID and launches Edge-Drop.exe', () => {
-    const xml = read('resources/appx/startup-extensions.xml')
-    expect(xml).toContain('Category="windows.startupTask"')
-    expect(xml).toContain('EntryPoint="Windows.FullTrustApplication"')
-    expect(xml).toContain('Executable="app\\Edge-Drop.exe"')
-    expect(xml).toContain(`TaskId="${STORE_STARTUP_TASK_ID}"`)
-    expect(xml).not.toContain('SlackStartup')
-    expect(xml).toContain('Enabled="true"')
-    expect(xml).toContain('DisplayName="Edge-Drop"')
-  })
-
-  it('electron-builder still injects customExtensionsPath into the AppX Extensions block', () => {
-    const target = read('node_modules/app-builder-lib/out/targets/AppxTarget.js')
-    expect(target).toContain('customExtensionsPath')
-    expect(target).toContain('windows.startupTask')
-    expect(target).toMatch(/extensions \+= await/)
-  })
-
-  it('main process only sets the custom AUMID on the GitHub build', () => {
-    const src = read('electron/main/index.ts')
-    expect(src).toMatch(/if\s*\(\s*!isStoreBuild\(\)\s*\)\s*\{[\s\S]*setAppUserModelId\('com\.edgedrop\.app'\)/)
-    expect(src).not.toMatch(/setAppUserModelId\([\s\S]*isStoreBuild\(\)/)
-  })
-
-  it('Settings hides the in-app updater on Store builds', () => {
-    const src = read('src/components/Settings.tsx')
-    // the Updates group only exists on GitHub builds
-    expect(src).toMatch(/\.\.\.\(!isStoreBuild \? \[\{\n\s+id: 'updates'/)
-    expect(src).toContain('behaviour.autoUpdatesTitle')
-    expect(src).toContain('hasPromotedTopUpdate = !isStoreBuild &&')
-    expect(src).toContain('if (isStoreBuild) return null')
-  })
-
-  it('Settings renders Store review button on Store builds and GitHub star on GitHub builds', () => {
-    const src = read('src/components/Settings.tsx')
-    expect(src).toContain('isStoreBuild ? (')
-    expect(src).toContain('store-review-promo-btn')
-    expect(src).toContain('ms-windows-store://review/?ProductId=9P3JMHN9M4NR')
-    expect(src).toContain('github-promo-btn')
-    expect(src).toContain('https://github.com/Deepender25/Edge-Drop')
-  })
-
-  it('updater module hard-returns on Store for every public entry', () => {
-    const src = read('electron/main/updater.ts')
-    expect(src).toMatch(/export function quitAndInstallUpdate[\s\S]*if \(isStoreBuild\(\)\) return/)
-    expect(src).toMatch(/export function syncAutoUpdaterState[\s\S]*if \(isStoreBuild\(\)/)
-    expect(src).toMatch(/export async function checkForUpdatesManual[\s\S]*if \(isStoreBuild\(\)\)/)
-    expect(src).toMatch(/export async function startUpdateDownload[\s\S]*if \(isStoreBuild\(\)/)
-    expect(src).toMatch(/export function initAutoUpdater[\s\S]*if \(isStoreBuild\(\)\)/)
+  it('keeps attribution and does not misrepresent the upstream developer', () => {
+    expect(existsSync(join(root, 'LICENSE'))).toBe(true)
+    expect(existsSync(join(root, 'PLIUM-PREVIEW.md'))).toBe(true)
+    expect(read('PLIUM-PREVIEW.md')).toContain('Edge-Drop')
+    expect(read('PLIUM-PREVIEW.md')).toContain('Apache-2.0')
   })
 })

@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { fileIconLayers, ICON_LAYER_PARTS } from '../shared/fileIconLayers'
 
 const root = join(__dirname, '..')
-const read = (p: string) => readFileSync(join(root, p), 'utf8')
+const read = (p: string) => readFileSync(join(root, p), 'utf8').replace(/\r\n?/g, '\n')
 const KINDS = ['pdf', 'word', 'excel', 'powerpoint', 'archive', 'text', 'code', 'audio', 'video', 'image', 'executable', 'folder', 'file']
 
 describe('folder icon layers (shared/fileIconLayers)', () => {

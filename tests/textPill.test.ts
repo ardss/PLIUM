@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const css = readFileSync(join(__dirname, '..', 'src/styles/item.css'), 'utf8')
+const css = readFileSync(join(__dirname, '..', 'src/styles/item.css'), 'utf8').replace(/\r\n?/g, '\n')
 
 describe('hover pill on text, link, code and color cards', () => {
   it('docks at the bottom right in both docks, on shelf cards only (not the preview flyout)', () => {

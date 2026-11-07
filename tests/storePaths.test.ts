@@ -36,7 +36,7 @@ import {
 } from '../electron/store/paths'
 
 function expectedStoreTemp(): string {
-  return join(fsRoots.home, 'AppData', 'Local', 'Temp', 'Edge-Drop')
+  return join(fsRoots.home, 'AppData', 'Local', 'Temp', 'PLIUM')
 }
 
 function sha10(filePath: string): string {

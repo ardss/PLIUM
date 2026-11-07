@@ -41,6 +41,13 @@ describe('every language has every string', () => {
     const L = leaves(TRANSLATIONS[code] as unknown as Tree)
     for (const [key, enVal] of Object.entries(EN)) {
       const v = L[key]
+      // scrollPosition is intentionally optional: untranslated locales use the
+      // English fallback in t(), while Chinese locales ship native wording.
+      if (key === 'item.scrollPosition' && v === undefined) {
+        setLanguage(code)
+        expect(t('item.scrollPosition'), `${code} fallback`).toBe(en.item.scrollPosition)
+        continue
+      }
       expect(v, `${code} ${key}`).toBeDefined()
       if (isPlural(enVal)) {
         expect(isPlural(v), `${code} ${key} is a plural group`).toBe(true)

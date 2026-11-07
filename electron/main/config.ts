@@ -108,7 +108,7 @@ export function shouldStartHidden(): boolean {
 }
 
 export const APP_CONFIG = {
-  appName: 'Edge-Drop',
+  appName: 'PLIUM',
   /** Custom protocol used to serve local image files to the renderer securely. */
   imageProtocol: 'edgelocal',
   is: {

@@ -392,11 +392,11 @@ export function Settings({
             className="settings-support-btn is-primary kofi-support-btn"
             onClick={() => {
               playButtonClickSound()
-              window.open('https://www.edgedrop.app/supportedgedrop', '_blank')
+              window.open('https://github.com/ardss/Edge-Drop', '_blank')
             }}
           >
             <HeartIcon width={13} height={13} />
-            <span>{t('footer.supportOnKofi')}</span>
+            <span>PLIUM 开源代码</span>
           </button>
           {isStoreBuild ? (
             <button
@@ -416,7 +416,7 @@ export function Settings({
               className="settings-support-btn github-promo-btn"
               onClick={() => {
                 playButtonClickSound()
-                window.open('https://github.com/Deepender25/Edge-Drop', '_blank')
+                window.open('https://github.com/ardss/Edge-Drop', '_blank')
               }}
             >
               <GithubOctocatLogo width={13} height={13} className="github-octocat-icon" />
@@ -427,8 +427,8 @@ export function Settings({
       </section>
 
       <section className={`settings-support settings-about${isHorizontal ? ' is-h' : ''}`} data-card="about">
-        <h3 className="set-group-label">{t('groups.aboutEdgeDrop') || 'ABOUT EDGE-DROP'}</h3>
-        <div className="settings-about-title">Edge-Drop {currentVersion || '0.3.1'}</div>
+        <h3 className="set-group-label">{t('groups.aboutEdgeDrop') || 'ABOUT PLIUM'}</h3>
+        <div className="settings-about-title">PLIUM · 叠间 {currentVersion || '0.3.1'}</div>
         <div className="settings-support-tagline">{t('footer.feedbackDesc')}</div>
         <div className="settings-support-actions">
           <button
@@ -436,7 +436,7 @@ export function Settings({
             className="settings-support-btn"
             onClick={() => {
               playButtonClickSound()
-              window.open('https://github.com/Deepender25/Edge-Drop/issues/new/choose', '_blank')
+              window.open('https://github.com/ardss/Edge-Drop/issues', '_blank')
             }}
           >
             <span>{t('footer.submitFeedback')}</span>
@@ -463,7 +463,7 @@ export function Settings({
     if (targetVersion) {
       patch({ lastSeenChangelogVersion: targetVersion })
     }
-    window.open('https://www.edgedrop.app/changelog', '_blank')
+    window.open('https://github.com/ardss/Edge-Drop', '_blank')
   }
 
   // ── Promoted Top Update Card Renderer (Vertical Layout) ────────────────────

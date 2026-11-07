@@ -110,7 +110,7 @@ export function Panel() {
       }, DOCK_MOTION.durationMs + 80)
     }
     dockFlip.capture()
-    void patchSettings({ dockRows: rows === 3 ? 3 : 1 })
+    void patchSettings({ dockRows: Math.min(3, Math.max(1, Math.round(rows))) })
   }
   // When the committed height changes elsewhere (launch, sync), follow it:
   // snap down (the window is already there), tween up on the next frame.
@@ -644,10 +644,10 @@ export function Panel() {
               className="dock-expand-handle"
               onClick={() => {
                 playButtonClickSound()
-                commitRows((settings.dockRows ?? 1) === 1 ? 3 : 1)
+                commitRows((settings.dockRows ?? 1) >= 3 ? 1 : (settings.dockRows ?? 1) + 1)
               }}
-              title={t((settings.dockRows ?? 1) > 1 ? 'item.collapse' : 'item.expand')}
-              aria-label={t((settings.dockRows ?? 1) > 1 ? 'item.collapse' : 'item.expand')}
+              title={t((settings.dockRows ?? 1) >= 3 ? 'item.collapse' : 'item.expand')}
+              aria-label={t((settings.dockRows ?? 1) >= 3 ? 'item.collapse' : 'item.expand')}
               aria-expanded={(settings.dockRows ?? 1) > 1}
             >
               {/* Resting state is a real solid bar (a squashed chevron reads as

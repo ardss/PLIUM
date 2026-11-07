@@ -15,7 +15,7 @@ export interface HeaderProps {
   isHorizontal?: boolean
   itemCount?: number
   /** Delegate to Panel so both controls use one native-window transition. */
-  onDockRowsChange?: (rows: 1 | 3) => void
+  onDockRowsChange?: (rows: 1 | 2 | 3) => void
   clearProps?: {
     items: ClipboardItemDto[]
     disabled: boolean
@@ -46,7 +46,7 @@ export function Header({ isHorizontal = false, itemCount, clearProps, onDockRows
     if (currentVersion) {
       patchSettings({ lastSeenChangelogVersion: currentVersion })
     }
-    window.open('https://www.edgedrop.app/changelog', '_blank')
+    window.open('https://github.com/ardss/Edge-Drop', '_blank')
   }
 
   const typeFilter = useStore((s) => s.typeFilter)
@@ -67,8 +67,9 @@ export function Header({ isHorizontal = false, itemCount, clearProps, onDockRows
     { id: 'colors', label: t('filters.colors') || 'Colors', Icon: PaletteIcon }
   ]
 
+  const nextDockRows = ((settings.dockRows ?? 1) >= 3 ? 1 : (settings.dockRows ?? 1) + 1) as 1 | 2 | 3
   const dockIsExpanded = (settings.dockRows ?? 1) > 1
-  const dockActionLabel = t(dockIsExpanded ? 'item.collapse' : 'item.expand')
+  const dockActionLabel = `${t(nextDockRows === 1 ? 'item.collapse' : 'item.expand')} · ${nextDockRows}/3`
   const reduceMotion = !!settings.reduceMotion
   const headerFade = `opacity ${reduceMotion ? '0.01s' : '0.16s'} ease`
 
@@ -159,7 +160,7 @@ export function Header({ isHorizontal = false, itemCount, clearProps, onDockRows
                 tabIndex={settingsOpen ? -1 : undefined}
                 onClick={() => {
                   playButtonClickSound()
-                  onDockRowsChange(dockIsExpanded ? 1 : 3)
+                  onDockRowsChange(nextDockRows)
                 }}
               >
                 <svg

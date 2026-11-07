@@ -1,8 +1,8 @@
 {
-  "name": "edge-drop",
-  "version": "0.4.0",
-  "description": "Edge-Drop — a clipboard manager that lives on the left edge of your screen and expands on hover.",
-  "author": "Edge-Drop",
+  "name": "plium",
+  "version": "0.4.0-plium.1",
+  "description": "PLIUM / 叠间 - an edge clipboard shelf for Windows",
+  "author": "PLIUM contributors",
   "license": "Apache-2.0",
   "private": true,
   "main": "out/main/index.js",
@@ -11,8 +11,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "build:github": "npm run build && electron-builder --win nsis -c.extraMetadata.buildTarget=github",
-    "build:store": "npm run build && electron-builder --win appx -c.extraMetadata.buildTarget=store",
-    "build:msix": "npm run build && electron-builder --win appx -c.extraMetadata.buildTarget=store",
+    "build:store": "node -e \"console.error('PLIUM MSIX preview distribution is disabled');process.exit(1)\"",
+    "build:msix": "node -e \"console.error('PLIUM MSIX preview distribution is disabled');process.exit(1)\"",
     "build:win": "npm run build:github",
     "package": "npm run build:github",
     "preview": "electron-vite preview",
@@ -23,8 +23,8 @@
     "postinstall": "install-electron"
   },
   "build": {
-    "appId": "com.edgedrop.app",
-    "productName": "Edge-Drop",
+    "appId": "com.ardss.plium",
+    "productName": "PLIUM",
     "directories": {
       "output": "dist",
       "buildResources": "resources"
@@ -50,10 +50,6 @@
     ],
     "extraResources": [
       {
-        "from": "resources/startup/EdgeDropStartup.exe",
-        "to": "startup/EdgeDropStartup.exe"
-      },
-      {
         "from": "node_modules/emoji-datasource-twitter/img/twitter/64",
         "to": "emoji/64"
       }
@@ -64,21 +60,10 @@
       "**/node_modules/@koromix/**/*",
       "**/node_modules/@resvg/**/*"
     ],
-    "publish": {
-      "provider": "github",
-      "owner": "Deepender25",
-      "repo": "Edge-Drop"
-    },
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "appx",
           "arch": [
             "x64"
           ]
@@ -90,22 +75,10 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "Edge-Drop",
+      "shortcutName": "PLIUM 叠间",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "artifactName": "Edge-Drop-Setup-${version}.${ext}"
-    },
-    "appx": {
-      "identityName": "Deepender.EdgeDrop",
-      "publisher": "CN=55FECDC4-7144-4A41-98FC-056C003F76FD",
-      "publisherDisplayName": "Deepender",
-      "applicationId": "EdgeDrop",
-      "displayName": "Edge Drop",
-      "capabilities": [
-        "runFullTrust",
-        "internetClient"
-      ],
-      "customExtensionsPath": "resources/appx/startup-extensions.xml"
+      "artifactName": "PLIUM-Setup-${version}.${ext}"
     }
   },
   "devDependencies": {

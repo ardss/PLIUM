@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1248 1248" width="1248" height="1248" role="img" aria-labelledby="logo-title logo-description">
+<title id="logo-title">ClipVault · 精修折叠金属带标志</title>
+<desc id="logo-description">重新构造右下边界为连续贝塞尔曲线，使之与右侧卷曲面切向衔接；金属反光、阴影与折叠面分别保持 SVG 可编辑。</desc><defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#191b20"/><stop offset=".65" stop-color="#111318"/><stop offset="1" stop-color="#0a0c10"/></linearGradient>
+ <linearGradient id="top-metal" gradientUnits="userSpaceOnUse" x1="250" y1="252" x2="923" y2="675">
+  <stop offset="0" stop-color="#f9fafd"/><stop offset=".22" stop-color="#f0f0f4"/><stop offset=".46" stop-color="#d9dade"/><stop offset=".7" stop-color="#b4b6c0"/><stop offset=".89" stop-color="#cdd0d7"/><stop offset="1" stop-color="#f8f9fa"/>
+ </linearGradient>
+ <radialGradient id="top-daylight" gradientUnits="userSpaceOnUse" cx="325" cy="297" fx="320" fy="240" r="640" gradientTransform="matrix(.98 .07 -.06 .84 37 33)">
+  <stop stop-color="#fff" stop-opacity=".86"/><stop offset=".34" stop-color="#fff" stop-opacity=".4"/><stop offset=".72" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="crown-gloss" gradientUnits="userSpaceOnUse" cx="622" cy="148" r="475" fx="570" fy="102" gradientTransform="matrix(1 0 0 .61 0 67)">
+  <stop stop-color="#fff" stop-opacity=".45"/><stop offset=".44" stop-color="#fff" stop-opacity=".04"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+ </radialGradient>
+ <linearGradient id="top-brushed" gradientUnits="userSpaceOnUse" x1="870" y1="177" x2="492" y2="770">
+  <stop stop-color="#fff" stop-opacity="0"/><stop offset=".31" stop-color="#fff" stop-opacity=".03"/><stop offset=".49" stop-color="#fff" stop-opacity=".14"/><stop offset=".66" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+ </linearGradient>
+ <radialGradient id="upper-right-dim" gradientUnits="userSpaceOnUse" cx="951" cy="363" r="315" fx="945" fy="376">
+  <stop stop-color="#61636e" stop-opacity=".20"/><stop offset=".52" stop-color="#727580" stop-opacity=".05"/><stop offset="1" stop-color="#727580" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="fold-left-form" gradientUnits="userSpaceOnUse" cx="262" cy="865" r="355" fx="235" fy="876">
+  <stop stop-color="#33353d" stop-opacity=".2"/><stop offset=".56" stop-color="#61646c" stop-opacity=".065"/><stop offset="1" stop-color="#60636b" stop-opacity="0"/>
+ </radialGradient>
+ <linearGradient id="under-left" gradientUnits="userSpaceOnUse" x1="308" y1="669" x2="357" y2="1088">
+  <stop stop-color="#15171d"/><stop offset=".2" stop-color="#292b32"/><stop offset=".47" stop-color="#51535c"/><stop offset=".77" stop-color="#92949f"/><stop offset="1" stop-color="#f1f2f7"/>
+ </linearGradient>
+ <linearGradient id="under-right" gradientUnits="userSpaceOnUse" x1="828" y1="379" x2="725" y2="1035">
+  <stop stop-color="#22242b"/><stop offset=".125" stop-color="#34363e"/><stop offset=".29" stop-color="#686a74"/><stop offset=".54" stop-color="#abb0ba"/><stop offset=".77" stop-color="#e4e6ec"/><stop offset="1" stop-color="#fbfbfe"/>
+ </linearGradient>
+ <radialGradient id="reflected-softbox" gradientUnits="userSpaceOnUse" cx="785" cy="812" fx="756" fy="860" r="370" gradientTransform="matrix(1 0 0 .78 0 155)">
+  <stop stop-color="#fff" stop-opacity=".25"/><stop offset=".52" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+ </radialGradient>
+ <radialGradient id="end-rolling-specular" gradientUnits="userSpaceOnUse" cx="1005" cy="606" fx="990" fy="653" r="450" gradientTransform="matrix(.85 0 0 1.13 146 -48)">
+  <stop stop-color="#f8f9fe" stop-opacity=".23"/><stop offset=".46" stop-color="#f6f7fb" stop-opacity=".10"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+ </radialGradient>
+ <linearGradient id="cool-reflection" gradientUnits="userSpaceOnUse" x1="610" y1="400" x2="980" y2="790">
+  <stop stop-color="#fff" stop-opacity="0"/><stop offset=".28" stop-color="#fff" stop-opacity=".06"/><stop offset=".52" stop-color="#fff" stop-opacity=".12"/><stop offset=".73" stop-color="#fff" stop-opacity=".025"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+ </linearGradient>
+ <linearGradient id="front-fold-rim" gradientUnits="userSpaceOnUse" x1="240" y1="865" x2="980" y2="360">
+  <stop stop-color="#fdfdff" stop-opacity=".65"/><stop offset=".21" stop-color="#fff" stop-opacity=".34"/><stop offset=".48" stop-color="#e9ecf4" stop-opacity=".55"/><stop offset=".78" stop-color="#fefeff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity=".99"/>
+ </linearGradient>
+ <linearGradient id="bottom-edge-rim" gradientUnits="userSpaceOnUse" x1="238" y1="1098" x2="872" y2="751">
+  <stop stop-color="#fff" stop-opacity=".91"/><stop offset=".24" stop-color="#fff" stop-opacity=".27"/><stop offset=".54" stop-color="#c4c8d3" stop-opacity=".32"/><stop offset=".8" stop-color="#333844" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity=".66"/>
+ </linearGradient>
+ <linearGradient id="seam-line" gradientUnits="userSpaceOnUse" x1="550" y1="561.52" x2="550" y2="951.77">
+  <stop stop-color="#fff" stop-opacity=".04"/><stop offset=".35" stop-color="#fff" stop-opacity=".19"/><stop offset="1" stop-color="#fff" stop-opacity=".56"/>
+ </linearGradient>
+ <linearGradient id="top-edge-glint" gradientUnits="userSpaceOnUse" x1="238" y1="486" x2="850" y2="186">
+  <stop stop-color="#fff" stop-opacity=".30"/><stop offset=".34" stop-color="#fff" stop-opacity=".62"/><stop offset=".77" stop-color="#fff" stop-opacity=".19"/><stop offset="1" stop-color="#fff" stop-opacity=".07"/>
+ </linearGradient>
+ <clipPath id="clip-top"><use href="#upper-base-path"/></clipPath>
+ <clipPath id="clip-back"><use href="#underside-base-path"/></clipPath>
+ <filter id="contact-softness" x="-30%" y="-50%" width="170%" height="230%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="10"/></filter>
+ <filter id="ambient-softness" x="-30%" y="-50%" width="170%" height="230%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="15"/></filter>
+ </defs>
+<g id="editable-logo" aria-label="编辑路径+材质光照分层">
+ <g id="underside-physical-form" aria-label="背面几何与整体遮挡">
+  <path id="underside-base-path" d="M 238,865
+C 239,798 277,725 348,681
+C 522,575 703,474 887,372
+C 925,355 950,348 980,356
+C 1007,384 1017,431 1018,486
+L 1018,519
+C 1018,621 962,683 872,751
+C 680,896 435,1016 238,1098 Z" fill="#33353e"/>
+  <g clip-path="url(#clip-back)">
+   <rect x="220" y="340" width="330" height="780" fill="url(#under-left)"/>
+   <rect x="550" y="340" width="495" height="780" fill="url(#under-right)"/>
+   <path d="M 238,865 C 239,798 277,725 348,681 C 522,575 703,474 887,372 C 925,355 950,348 980,356" fill="none" stroke="#090a0f" stroke-opacity=".30" stroke-width="3.2"/>
+   <rect x="550" y="365" width="500" height="730" fill="url(#end-rolling-specular)"/>
+   <rect x="550" y="365" width="500" height="730" fill="url(#reflected-softbox)"/>
+   <rect x="550" y="365" width="500" height="650" fill="url(#cool-reflection)"/>
+
+  </g>
+  <path id="lighting-plane-seam" d="M 550,561.52 V 951.77" fill="none" stroke="url(#seam-line)" stroke-width="1.35"/>
+ </g>
+ <g id="upper-physical-form" aria-label="上层金属带正面">
+  <path id="upper-base-path" d="M 238,865 L 238,486
+C 238,395 275,329 370,268
+L 522,176
+C 564,151 591,145 622,145
+C 658,145 689,161 723,186
+C 803,245 919,340 980,356
+C 950,348 925,355 887,372
+C 703,474 522,575 348,681
+C 277,725 239,798 238,865 Z" fill="url(#top-metal)"/>
+  <use href="#upper-base-path" fill="url(#top-daylight)"/>
+  <use href="#upper-base-path" fill="url(#crown-gloss)"/>
+  <use href="#upper-base-path" fill="url(#top-brushed)"/>
+  <use href="#upper-base-path" fill="url(#upper-right-dim)"/>
+  <use href="#upper-base-path" fill="url(#fold-left-form)"/>
+ </g>
+ <g id="micro-highlights" aria-label="折边高光和微弱轮廓反射" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path id="fold-edge-light" d="M 238,865 C 239,798 277,725 348,681 C 522,575 703,474 887,372 C 925,355 950,348 980,356" stroke="url(#front-fold-rim)" stroke-width="1.8"/>
+  <path id="top-outline-light" d="M238,486 C238,395 275,329 370,268 L522,176 C564,151 591,145 622,145 C658,145 689,161 723,186" stroke="url(#top-edge-glint)" stroke-width="1.35"/>
+  <path id="curved-bottom-edge-light" d="M 872,751 C 680,896 435,1016 238,1098" stroke="url(#bottom-edge-rim)" stroke-width="1.55"/>
+  <path id="right-end-edge-light" d="M 980,356 C 1007,384 1017,431 1018,486 L 1018,519 C 1018,621 962,683 872,751" stroke="#fff" stroke-opacity=".20" stroke-width="1.25"/>
+ </g>
+</g></svg>

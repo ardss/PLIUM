@@ -20,12 +20,12 @@ export { StartupTaskState }
 
 /** Historical + current Run-key names written by this app. */
 export const GITHUB_LOGIN_ITEM_NAMES = [
-  'Edge-Drop',
-  'com.edgedrop.app',
-  'electron.app.Edge-Drop'
+  'PLIUM',
+  'com.ardss.plium',
+  'electron.app.PLIUM'
 ] as const
 
-export const CANONICAL_LOGIN_ITEM_NAME = 'Edge-Drop'
+export const CANONICAL_LOGIN_ITEM_NAME = 'PLIUM'
 
 export interface LaunchAtLoginResult {
   enabled: boolean

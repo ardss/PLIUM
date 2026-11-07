@@ -99,7 +99,7 @@ app.whenReady().then(() => {
   // GitHub NSIS needs an explicit AUMID. Store packages already have one from
   // the AppX identity; overriding it breaks toasts and taskbar grouping.
   if (!isStoreBuild()) {
-    app.setAppUserModelId('com.edgedrop.app')
+    app.setAppUserModelId('com.ardss.plium')
   }
 
   ensureDirs()

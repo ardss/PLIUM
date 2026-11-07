@@ -55,7 +55,7 @@ export const PATHS = {
  */
 export function getUnpackagedTempDir(): string {
   if (isStoreBuild()) {
-    return join(homedir(), 'AppData', 'Local', 'Temp', 'Edge-Drop')
+    return join(homedir(), 'AppData', 'Local', 'Temp', 'PLIUM')
   }
   return PATHS.tempDir()
 }

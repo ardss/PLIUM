@@ -9,9 +9,9 @@ const panel = readFileSync(join(root, 'src/components/Panel.tsx'), 'utf8')
 const css = readFileSync(join(root, 'src/styles/panel.css'), 'utf8')
 
 describe('dock expand/collapse semantics', () => {
-  it('uses a single action instead of numeric row choices', () => {
+  it('cycles a single compact action through 1/2/3 rows', () => {
     expect(header).toContain('className="dock-layout-toggle"')
-    expect(header).toContain("const dockActionLabel = t(dockIsExpanded ? 'item.collapse' : 'item.expand')")
+    expect(header).toContain("const dockActionLabel =")
     expect(header).not.toContain('dock-layout-seg')
     expect(header).not.toContain("value: '1', lines: 1")
     expect(header).not.toContain("value: '3', lines: 3")
@@ -20,7 +20,7 @@ describe('dock expand/collapse semantics', () => {
   })
 
   it('clicks toggle between folded and expanded using the existing transition', () => {
-    expect(header).toContain('onDockRowsChange(dockIsExpanded ? 1 : 3)')
+    expect(header).toContain('onDockRowsChange(nextDockRows)')
     expect(header).toContain('aria-expanded={dockIsExpanded}')
     expect(header).toContain('aria-label={dockActionLabel}')
     expect(panel).toContain('onDockRowsChange={isHorizontal ? commitRows : undefined}')
@@ -28,8 +28,8 @@ describe('dock expand/collapse semantics', () => {
   })
 
   it('uses the same action label for the lower drag handle', () => {
-    expect(panel).toContain("title={t((settings.dockRows ?? 1) > 1 ? 'item.collapse' : 'item.expand')}")
-    expect(panel).toContain("aria-label={t((settings.dockRows ?? 1) > 1 ? 'item.collapse' : 'item.expand')}")
+    expect(panel).toContain("title={t((settings.dockRows ?? 1) >= 3 ? 'item.collapse' : 'item.expand')}")
+    expect(panel).toContain("aria-label={t((settings.dockRows ?? 1) >= 3 ? 'item.collapse' : 'item.expand')}")
   })
 
   it('has both action labels for every supported language', () => {

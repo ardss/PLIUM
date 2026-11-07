@@ -1,11 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { TrashIcon } from './icons'
 import { playButtonClickSound } from '../lib/soundEffects'
 import { useTranslation } from '../i18n'
 import type { ClipboardItemDto } from '../../shared/types'
 import { isKept } from '../../shared/itemMeta'
 import { selectClearIds, sameClearIds, type ClearScope } from '../lib/clearPlan'
+import { positionClearPopover, type PopoverPosition } from '../lib/clearPopoverGeometry'
 
 interface ClearMenuProps {
   /** Full item list (pinned + recent) to compute time-window ids from. */
@@ -58,6 +60,8 @@ export function ClearMenu({
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<{scope: ClearScope; ids: string[]; armedAt: number} | null>(null)
   const ref = useRef<HTMLDivElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [placement, setPlacement] = useState<PopoverPosition | null>(null)
 
   // Force-close menu when panel slides closed
   useEffect(() => {
@@ -69,7 +73,8 @@ export function ClearMenu({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && !ref.current.contains(e.target as Node) &&
+          !popoverRef.current?.contains(e.target as Node)) {
         setOpen(false)
         setPending(null)
       }
@@ -89,6 +94,32 @@ export function ClearMenu({
       window.removeEventListener('keydown', handleEscape, true)
     }
   }, [open])
+
+  // Escape both the native window's clipped blade and its overflow:hidden.
+  // The entire popover must remain inside the actual Electron viewport:
+  // top Dock has just 218px in single-row mode.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlacement(null)
+      return
+    }
+    const reposition = () => {
+      const anchor = ref.current?.getBoundingClientRect()
+      const menu = popoverRef.current
+      if (!anchor || !menu) return
+      const next = positionClearPopover(
+        anchor,
+        { width: menu.offsetWidth, height: menu.scrollHeight },
+        { width: window.innerWidth, height: window.innerHeight },
+        menuDirection === 'up'
+      )
+      setPlacement((prev) => prev?.left === next.left && prev?.top === next.top &&
+        prev?.maxHeight === next.maxHeight ? prev : next)
+    }
+    reposition()
+    window.addEventListener('resize', reposition)
+    return () => window.removeEventListener('resize', reposition)
+  }, [open, pending, menuDirection])
 
   // Every bulk deletion requires an explicit review and a separate confirm action.
   useEffect(() => {
@@ -128,6 +159,7 @@ export function ClearMenu({
   const isMenuDown = menuDirection === 'down'
 
   return (
+    <>
     <div ref={ref} style={{ position: 'relative', zIndex: open ? 350 : 'auto' }}>
       <button
         className={`text-btn${open ? ' active' : ''}`}
@@ -145,19 +177,28 @@ export function ClearMenu({
         <span>{t('item.clear')}</span>
       </button>
 
+    </div>
+    {typeof document !== 'undefined' && createPortal(
       <AnimatePresence>
         {open && (
           <motion.div
+            data-plium-clear-popover
+            ref={popoverRef}
             initial={{ opacity: 0, y: isMenuDown ? -6 : 6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: isMenuDown ? -6 : 6, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
             style={{
-              position: 'absolute',
-              top: isMenuDown ? 'calc(100% + 6px)' : undefined,
-              bottom: isMenuDown ? undefined : 'calc(100% + 6px)',
-              right: 0,
-              minWidth: pending ? 268 : 190,
+              position: 'fixed',
+              top: placement?.top ?? 8,
+              left: placement?.left ?? 8,
+              width: pending ? 'min(320px, calc(100vw - 16px))' : 'min(200px, calc(100vw - 16px))',
+              maxHeight: placement?.maxHeight ?? 'calc(100vh - 16px)',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              visibility: placement ? 'visible' : 'hidden',
+              pointerEvents: 'auto',
+              overflowWrap: 'anywhere',
               background: '#141414',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: 16,
@@ -167,7 +208,7 @@ export function ClearMenu({
             }}
           >
             {pending ? (
-              <div role="group" aria-label={t('item.clearConfirmTitle')} style={{ width: 246 }}>
+              <div role="group" aria-label={t('item.clearConfirmTitle')} style={{ width: '100%' }}>
                 <div style={{ fontSize: 13, fontWeight: 650, margin: '2px 3px 7px', color: '#f5f5f5' }}>
                   {t('item.clearConfirmTitle')}
                 </div>
@@ -220,7 +261,8 @@ export function ClearMenu({
             )}
           </motion.div>
         )}
-      </AnimatePresence>
-    </div>
+      </AnimatePresence>, document.body
+    )}
+    </>
   )
 }

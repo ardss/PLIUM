@@ -20,6 +20,7 @@ export interface HeaderProps {
     items: ClipboardItemDto[]
     disabled: boolean
     panelOpen: boolean
+    filtered?: boolean
     onClear: (ids: string[]) => void
     onClearAll: () => void
   }

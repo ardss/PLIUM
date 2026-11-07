@@ -11,7 +11,7 @@
  *   - Convert internal items to the serializable DTO form for the renderer.
  */
 import { existsSync, readFileSync, writeFileSync, rmSync, statSync, readdirSync, openSync, writeSync, fsyncSync, closeSync, renameSync } from 'node:fs'
-import { join, extname, basename as pathBasename } from 'node:path'
+import { join, extname, resolve, sep, basename as pathBasename } from 'node:path'
 import { nativeImage, safeStorage } from 'electron'
 import { thumbnailUrlForFile, thumbnailUrlForStoredImage } from '../main/imageProtocol'
 import {
@@ -23,7 +23,7 @@ import {
   type FileEntry,
   MAX_STACK
 } from '../../shared/types'
-import { PATHS } from './paths'
+import { PATHS, isStagedTempPath } from './paths'
 import { createId } from './ids'
 import { contentSignature } from './signature'
 import { MAX_ITEM_HTML_CHARS } from '../clipboard/formats'
@@ -684,8 +684,12 @@ export class ItemStore {
       let newData: ItemData = { kind: 'files', paths: targetPaths }
       if (targetPaths.length === 1) {
         const p = targetPaths[0]
-        const pLower = p.toLowerCase()
-        const isFromManagedDir = pLower.includes('images') || pLower.includes('temp') || pLower.includes('edge-drop')
+        // Only our managed image/staging roots can be converted back into an
+        // image card. A user's folder named "My Images" is NOT an internal path.
+        // Resolve first so a path containing ".." cannot pass this check.
+        const resolvedPath = resolve(p).toLowerCase()
+        const imageRootPrefix = `${resolve(PATHS.imagesDir()).toLowerCase()}${sep}`
+        const isFromManagedDir = resolvedPath.startsWith(imageRootPrefix) || isStagedTempPath(p)
         if (isImageExt(p) && isFromManagedDir) {
           const imgName = pathBasename(p)
           let imageId = imgName.split('.')[0]

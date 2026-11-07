@@ -14,7 +14,9 @@ describe('update prompt placement contracts (promoted lifecycle, bottom hides wh
     // Top card shows all active update lifecycle stages.
     expect(src).toContain('hasPromotedTopUpdate = !isStoreBuild && (')
     // The manual "check for updates" row hides while promoted, in both docks.
-    expect(src).toContain('if (isStoreBuild || hasPromotedTopUpdate) return null')
+    // PLIUM preview has no owned updater feed, so the action must also be hidden
+    // when preview releases disable updates entirely.
+    expect(src).toContain('if (!PLIUM_PREVIEW_UPDATES_ENABLED || isStoreBuild || hasPromotedTopUpdate) return null')
     expect(src).toContain('...(updateCheck ? [updateCheck] : [])')
   })
 

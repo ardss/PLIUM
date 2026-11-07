@@ -37,6 +37,9 @@ import '../styles/settings.css'
 /** Widest a top-dock settings column grows to (settings.css .set-col max-width). */
 const SET_COL_MAX = 420
 
+/** Until a verified, PLIUM-owned release feed exists, do not advertise broken update actions. */
+export const PLIUM_PREVIEW_UPDATES_ENABLED = false
+
 /** Text cut short: an ellipsis, or lines past its clamp. */
 function isCut(el: HTMLElement): boolean {
   return el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1
@@ -762,7 +765,7 @@ export function Settings({
   // Hidden while the promoted top card shows an actionable state (it already
   // carries Download / Skip / Restart / progress).
   const renderUpdateCheckRow = (): RowSpec | null => {
-    if (isStoreBuild || hasPromotedTopUpdate) return null
+    if (!PLIUM_PREVIEW_UPDATES_ENABLED || isStoreBuild || hasPromotedTopUpdate) return null
     const status = checkState.status
     const buttonLabel =
       status === 'checking'
@@ -1068,14 +1071,19 @@ export function Settings({
           rows: [
             {
               id: 'update-mode',
-              title: t('behaviour.autoUpdatesTitle'),
-              desc:
-                updateMode === 'auto'
+              title: PLIUM_PREVIEW_UPDATES_ENABLED
+                ? t('behaviour.autoUpdatesTitle')
+                : resolvedLang.startsWith('zh') ? '预览版更新' : 'Preview updates',
+              desc: !PLIUM_PREVIEW_UPDATES_ENABLED
+                ? resolvedLang.startsWith('zh')
+                  ? '当前版本不提供在线更新。请通过经过验证的 PLIUM 安装包升级，原版 Edge-Drop 更新通道不会连接。'
+                  : 'Online updates are unavailable in this preview. Upgrade only with a verified PLIUM installer; upstream Edge-Drop updates stay disconnected.'
+                : updateMode === 'auto'
                   ? t('behaviour.autoUpdatesDescOn')
                   : updateMode === 'notify'
                     ? (t('behaviour.updateModeNotifyDesc') || 'Notify when updates are available without downloading')
                     : t('behaviour.autoUpdatesDescOff'),
-              below: pills<UpdateMode>(
+              below: PLIUM_PREVIEW_UPDATES_ENABLED ? pills<UpdateMode>(
                 [
                   { label: t('behaviour.updateModeAuto') || 'Automatic', val: 'auto' },
                   { label: t('behaviour.updateModeNotify') || 'Notify me', val: 'notify' },
@@ -1083,7 +1091,7 @@ export function Settings({
                 ],
                 (v) => updateMode === v,
                 (v) => patch({ updateMode: v })
-              )
+              ) : undefined
             },
             ...(updateCheck ? [updateCheck] : [])
           ]

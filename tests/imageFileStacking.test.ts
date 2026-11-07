@@ -176,6 +176,24 @@ describe('Image and File Stacking & Merging', () => {
     }
   })
 
+  it('keeps a user-owned image file as a file when splitting a bundle', () => {
+    const store = new ItemStore()
+    const external = join(fsRoots.home, 'My Images')
+    mkdirSync(external, { recursive: true })
+    const photo = join(external, 'vacation.png')
+    const notes = join(fsRoots.home, 'notes.txt')
+    writeFileSync(photo, 'user-image-bytes')
+    writeFileSync(notes, 'notes')
+    store.add({ kind: 'files', paths: [notes, photo] }, 10)
+
+    const item = store.list()[0]
+    expect(store.split({ id: item.id, paths: [photo], splitPlacement: 'after' })).toBe(true)
+    const extracted = store.list().find((i) => i.id !== item.id)
+    // An arbitrary external folder containing the word "Images" must not
+    // be converted into a managed image: its identity and source path matter.
+    expect(extracted?.data).toEqual({ kind: 'files', paths: [photo] })
+  })
+
   it('splits an image out of a mixed files bundle back into an image card', () => {
     const store = new ItemStore()
     const imgPath = join(fsRoots.userData, 'images', 'img-web-3.png')

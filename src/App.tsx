@@ -13,7 +13,7 @@ import { Panel } from './components/Panel'
 import { useStore } from './store/appStore'
 import { edge } from './lib/edge'
 import { applyReduceMotion } from './lib/theme'
-import { useEdgeHover } from './hooks/useEdgeHover'
+import { useEdgeHover, EXPLICIT_OPEN_EVENT } from './hooks/useEdgeHover'
 import { useHoverResync } from './hooks/useHoverResync'
 
 export default function App() {
@@ -238,11 +238,13 @@ export default function App() {
           edge.setInteractive(false)
         }
       } else {
+        if (forceOpen === true) window.dispatchEvent(new Event(EXPLICIT_OPEN_EVENT))
         useStore.getState().setOpen(next)
         edge.setInteractive(next)
       }
     })
     const offOpenSettings = edge.onOpenSettings(() => {
+      window.dispatchEvent(new Event(EXPLICIT_OPEN_EVENT))
       useStore.getState().setOpen(true)
       useStore.getState().setSettingsOpen(true)
       edge.setInteractive(true)

@@ -70,6 +70,10 @@ const DOCK_ROWS_GRACE_MS = DOCK_MOTION.durationMs + 1180
 
 export const PANEL_LEAVE_EVENT = 'panel:leave'
 export const PANEL_ENTER_EVENT = 'panel:enter'
+/** Explicit tray/menu reveal needs time to reach the edge from the taskbar. */
+export const EXPLICIT_OPEN_EVENT = 'panel:explicit-open'
+export const EXPLICIT_OPEN_GRACE_MS = 5000
+export const remainingExplicitOpenGrace = (until: number, now: number) => Math.max(0, until - now)
 
 // How long to keep the panel alive after the user explicitly closes the preview
 // via the X button. This prevents the jarring simultaneous collapse of both
@@ -286,6 +290,7 @@ export function useEdgeHover(): void {
     let graceTimer: number | undefined
     let interactiveTimer: number | undefined
     let dragOpenTimer: number | undefined
+    let explicitOpenUntil = 0
 
     const closePanelNow = () => {
       const s = useStore.getState()
@@ -356,6 +361,9 @@ export function useEdgeHover(): void {
       // come back before the shelf closes.
       const menuStayLeft = state.cardMenuStayUntil - Date.now()
       if (menuStayLeft > 0) effectiveDelay = Math.max(effectiveDelay, menuStayLeft)
+      // Tray/Menu opens the shelf while the pointer is far away (often bottom-right).
+      // Without this, cursor polling closes it in 250ms before the user can reach it.
+      effectiveDelay = Math.max(effectiveDelay, remainingExplicitOpenGrace(explicitOpenUntil, Date.now()))
 
       graceTimer = window.setTimeout(closePanel, effectiveDelay)
     }
@@ -386,6 +394,11 @@ export function useEdgeHover(): void {
           _previewClosedTimer = undefined
         }
       }
+    }
+
+    const onExplicitOpen = () => {
+      cancelClose()
+      explicitOpenUntil = Date.now() + EXPLICIT_OPEN_GRACE_MS
     }
 
     const openPanel = () => {
@@ -502,6 +515,8 @@ export function useEdgeHover(): void {
     }
 
     const onPanelEnter = () => {
+      // Once the pointer reaches the shelf, resume normal hover-close timing.
+      explicitOpenUntil = 0
       cancelClose()
     }
 
@@ -652,6 +667,7 @@ export function useEdgeHover(): void {
           }
 
           if ((distFromTop >= -BUFFER_PX && distFromTop <= keepOpenDepth && insideX) || inFlyout) {
+            explicitOpenUntil = 0
             cancelClose()
             return
           }
@@ -714,6 +730,7 @@ export function useEdgeHover(): void {
           }
 
           if (distFromRight >= -BUFFER_PX && distFromRight <= currentKeepOpenPx && insideY) {
+            explicitOpenUntil = 0
             cancelClose()
             return
           }
@@ -776,6 +793,7 @@ export function useEdgeHover(): void {
           }
 
           if (data.x >= -BUFFER_PX && data.x <= currentKeepOpenPx && insideY) {
+            explicitOpenUntil = 0
             cancelClose()
             return
           }
@@ -793,7 +811,10 @@ export function useEdgeHover(): void {
       // (search owns Escape: clear, then blur).
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return
-      if (e.key === 'Escape' && useStore.getState().open) scheduleClose(0)
+      if (e.key === 'Escape' && useStore.getState().open) {
+        explicitOpenUntil = 0 // explicit dismissal must not wait out the tray grace
+        scheduleClose(0)
+      }
     }
 
     // ── window blur (Alt+Tab / OS focus stolen) ────────────────────────────
@@ -847,6 +868,7 @@ export function useEdgeHover(): void {
     }
 
     // ── register ───────────────────────────────────────────────────────────
+    window.addEventListener(EXPLICIT_OPEN_EVENT, onExplicitOpen)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('blur', onWindowBlur)
     window.addEventListener(PANEL_LEAVE_EVENT, onPanelLeave)
@@ -859,6 +881,7 @@ export function useEdgeHover(): void {
 
     return () => {
       unsubCursorEdge()
+      window.removeEventListener(EXPLICIT_OPEN_EVENT, onExplicitOpen)
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('blur', onWindowBlur)
       window.removeEventListener(PANEL_LEAVE_EVENT, onPanelLeave)

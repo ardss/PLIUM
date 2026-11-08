@@ -6,6 +6,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      package:
+        description: Force Windows installer build even for docs-only changes
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -36,7 +42,8 @@ jobs:
           $runtime = @($changed | Where-Object {
             $_ -notmatch '^(README\.md$|docs/|\.github/|tests/|PLIUM-PREVIEW\.md$|SECURITY\.md$|UPSTREAM-HISTORY\.md$|PRIVACY\.md$|CODE_OF_CONDUCT\.md$)'
           })
-          $required = if ($runtime.Count -gt 0) { 'true' } else { 'false' }
+          $force = '${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.package }}' -eq 'true'
+          $required = if ($force -or $runtime.Count -gt 0) { 'true' } else { 'false' }
           "package=$required" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host "Windows packaging required: $required (runtime files: $($runtime.Count))"
       - name: Install dependencies from lockfile
@@ -46,6 +53,12 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci --ignore-scripts --registry=https://registry.npmjs.org
+      - name: Install verified Electron runtime for native-module tests
+        env:
+          # npm ci skips postinstall, so tests that import electron need this explicitly.
+          ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/
+          ELECTRON_CUSTOM_DIR: '{{ version }}'
+        run: node node_modules/electron/install.js
       - name: TypeScript
         run: npm run typecheck
       - name: Unit and integration tests
@@ -54,6 +67,11 @@ jobs:
         run: npm audit --registry=https://registry.npmjs.org --audit-level=moderate
       - name: Build unsigned Windows installer (CI validation only)
         if: steps.impact.outputs.package == 'true'
+        env:
+          # Electron ZIP and electron-builder NSIS tools use separate verified mirrors.
+          ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/
+          ELECTRON_CUSTOM_DIR: '{{ version }}'
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://mirrors.huaweicloud.com/electron-builder-binaries/
         run: npm run build:win
       - name: Verify product identity
         run: |

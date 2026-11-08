@@ -66,13 +66,21 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(workflow).toContain("ELECTRON_SKIP_BINARY_DOWNLOAD: '1'")
     expect(workflow).toContain('npm ci --ignore-scripts --registry=https://registry.npmjs.org')
     expect(workflow).toContain("if: steps.impact.outputs.package == 'true'")
+    expect(workflow).toContain('Force Windows installer build even for docs-only changes')
+    expect(workflow).toContain("$force = '${{ github.event_name }}' -eq 'workflow_dispatch'")
+    expect(workflow).toContain('ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/')
+    expect(workflow).toContain('ELECTRON_BUILDER_BINARIES_MIRROR: https://mirrors.huaweicloud.com/electron-builder-binaries/')
+    expect(workflow).toContain("ELECTRON_CUSTOM_DIR: '{{ version }}'")
+    expect(workflow).toContain('node node_modules/electron/install.js')
+    expect(workflow.indexOf('Install verified Electron runtime for native-module tests')).toBeLessThan(workflow.indexOf('Unit and integration tests'))
+    expect(workflow).toContain('run: npm run build:win')
     expect(existsSync(join(root,'.github/workflows/download-count.yml'))).toBe(false)
   })
   it('never implicitly publishes unsigned Windows installers from CI', () => {
     const pkg = JSON.parse(read('package.json'))
     expect(pkg.scripts['build:github']).toContain('--publish never')
     expect(pkg.scripts['build:win']).toBe('npm run build:github')
-    expect(read('.github/workflows/quality.yml')).toContain('run: npm run build:win')
+    expect(read('.github/workflows/quality.yml')).toContain('npm run build:win')
   })
   it('archives imported docs and prevents accidental regeneration', () => {
     // This repository uses sparse checkout: archived docs can be committed

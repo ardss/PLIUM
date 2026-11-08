@@ -6,6 +6,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      package:
+        description: Force Windows installer build even for docs-only changes
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -36,7 +42,8 @@ jobs:
           $runtime = @($changed | Where-Object {
             $_ -notmatch '^(README\.md$|docs/|\.github/|tests/|PLIUM-PREVIEW\.md$|SECURITY\.md$|UPSTREAM-HISTORY\.md$|PRIVACY\.md$|CODE_OF_CONDUCT\.md$)'
           })
-          $required = if ($runtime.Count -gt 0) { 'true' } else { 'false' }
+          $force = '${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.package }}' -eq 'true'
+          $required = if ($force -or $runtime.Count -gt 0) { 'true' } else { 'false' }
           "package=$required" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host "Windows packaging required: $required (runtime files: $($runtime.Count))"
       - name: Install dependencies from lockfile
@@ -54,7 +61,14 @@ jobs:
         run: npm audit --registry=https://registry.npmjs.org --audit-level=moderate
       - name: Build unsigned Windows installer (CI validation only)
         if: steps.impact.outputs.package == 'true'
-        run: npm run build:win
+        env:
+          # Verified mirror for Electron release ZIPs; @electron/get verifies upstream SHA-256.
+          ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/
+          ELECTRON_CUSTOM_DIR: '{{ version }}'
+        run: |
+          node node_modules/electron/install.js
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build:win
       - name: Verify product identity
         run: |
           node -e "const p=require('./package.json');if(p.name!=='plium'||p.build.productName!=='PLIUM'||p.build.appId!=='com.ardss.plium')process.exit(1)"

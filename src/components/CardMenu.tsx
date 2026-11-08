@@ -24,6 +24,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import '../styles/pliumMenus.css'
 import type { ClipboardItemDto } from '../../shared/types'
 import { NOTE_MAX, normalizeNote } from '../../shared/itemMeta'
 import { registerCardEditorCommit, useStore } from '../store/appStore'
@@ -285,7 +286,7 @@ export function CardMenu() {
   return createPortal(
     <div
       ref={boxRef}
-      className={`card-menu${editing ? ' is-editing' : ''}${placement ? ' is-placed' : ''}`}
+      className={`card-menu plium-menu-surface${editing ? ' is-editing' : ''}${placement ? ' is-placed' : ''}`}
       role={editing ? 'dialog' : 'menu'}
       style={{
         left: placement?.left ?? 0,
@@ -330,7 +331,7 @@ function MenuRow({
     <button
       type="button"
       role="menuitem"
-      className={`card-menu-row${danger ? ' is-danger' : ''}`}
+      className={`card-menu-row plium-menu-row${danger ? ' is-danger' : ''}`}
       // Never take focus from a field the user may be typing in.
       onMouseDown={(e) => e.preventDefault()}
       onPointerDown={(e) => {

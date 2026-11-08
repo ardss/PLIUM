@@ -70,4 +70,16 @@
   --act-on-ink: #000000;
   --act-danger: #ff6b6b;
   --act-danger-bg: rgba(255, 107, 107, 0.16);
+  /* Context menus, including bulk-action confirmation; no independent
+     shadow/radius/typography design for each new menu. */
+  --menu-surface: #1c1c1c;
+  --menu-edge: var(--divider);
+  --menu-radius: 18px;
+  --menu-row-radius: 12px;
+  --menu-row-height: 32px;
+  --menu-row-font: calc(13px * var(--font-scale, 1));
+  --menu-ink: rgba(255, 255, 255, 0.86);
+  --menu-hover: rgba(255, 255, 255, 0.08);
+  --menu-shadow: inset 0 0 0 1px var(--menu-edge);
+
 }

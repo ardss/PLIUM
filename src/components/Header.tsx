@@ -22,7 +22,6 @@ export interface HeaderProps {
     panelOpen: boolean
     filtered?: boolean
     onClear: (ids: string[]) => void
-    onClearAll: () => void
   }
 }
 

@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { TrashIcon } from './icons'
 import { playButtonClickSound } from '../lib/soundEffects'
 import { useTranslation } from '../i18n'
+import { useStore } from '../store/appStore'
+import '../styles/pliumMenus.css'
 import type { ClipboardItemDto } from '../../shared/types'
 import { isKept } from '../../shared/itemMeta'
 import { selectClearIds, sameClearIds, type ClearScope } from '../lib/clearPlan'
@@ -19,8 +21,6 @@ interface ClearMenuProps {
   panelOpen: boolean
   /** Clear a specific set of ids (used for the time-window options via deleteBatch). */
   onClear: (ids: string[]) => void
-  /** Clear all unpinned history. */
-  onClearAll: () => void
   /** Direction menu flies out. Defaults to 'up' for bottom footer, 'down' for header. */
   menuDirection?: 'up' | 'down'
 }
@@ -31,29 +31,12 @@ const WINDOWS: { key: '1h' | '6h' | '24h'; hours: number }[] = [
   { key: '24h', hours: 24 }
 ]
 
-const menuItemStyle: CSSProperties = {
-  width: '100%',
-  display: 'flex',
-  alignItems: 'center',
-  padding: '7px 10px',
-  borderRadius: 7,
-  background: 'transparent',
-  color: 'rgba(255, 255, 255, 0.85)',
-  fontSize: 12,
-  fontWeight: 400,
-  border: 'none',
-  cursor: 'pointer',
-  textAlign: 'left',
-  transition: 'background 0.12s ease'
-}
-
 export function ClearMenu({
   items,
   disabled,
   panelOpen,
   filtered = false,
   onClear,
-  onClearAll,
   menuDirection = 'up'
 }: ClearMenuProps) {
   const { t } = useTranslation()
@@ -61,6 +44,7 @@ export function ClearMenu({
   const [pending, setPending] = useState<{scope: ClearScope; ids: string[]; armedAt: number} | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const [placement, setPlacement] = useState<PopoverPosition | null>(null)
 
   // Force-close menu when panel slides closed
@@ -81,9 +65,13 @@ export function ClearMenu({
     }
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      e.stopPropagation()
-      setOpen(false)
-      setPending(null)
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      if (pending) {
+        setPending(null)
+      } else {
+        setOpen(false)
+      }
     }
     if (open) {
       window.addEventListener('mousedown', handleClickOutside)
@@ -93,7 +81,7 @@ export function ClearMenu({
       window.removeEventListener('mousedown', handleClickOutside)
       window.removeEventListener('keydown', handleEscape, true)
     }
-  }, [open])
+  }, [open, pending])
 
   // Escape both the native window's clipped blade and its overflow:hidden.
   // The entire popover must remain inside the actual Electron viewport:
@@ -121,6 +109,10 @@ export function ClearMenu({
     return () => window.removeEventListener('resize', reposition)
   }, [open, pending, menuDirection])
 
+  useEffect(() => {
+    if (pending) cancelButtonRef.current?.focus()
+  }, [pending])
+
   // Every bulk deletion requires an explicit review and a separate confirm action.
   useEffect(() => {
     if (!open) setPending(null)
@@ -144,8 +136,7 @@ export function ClearMenu({
     }
     if (currentIds.length > 0) {
       playButtonClickSound()
-      if (pending.scope === 'all') onClearAll()
-      else onClear(currentIds)
+      onClear(currentIds)
     }
     setPending(null)
     setOpen(false)
@@ -166,6 +157,7 @@ export function ClearMenu({
         onClick={() => {
           if (disabled) return
           playButtonClickSound()
+          useStore.getState().closeCardMenu()
           setOpen((v) => !v)
           setPending(null)
         }}
@@ -182,6 +174,9 @@ export function ClearMenu({
       <AnimatePresence>
         {open && (
           <motion.div
+            role={pending ? 'dialog' : 'menu'}
+            aria-label={pending ? t('item.clearConfirmTitle') : t('item.clear')}
+            className="plium-menu-surface plium-clear-menu"
             data-plium-clear-popover
             ref={popoverRef}
             initial={{ opacity: 0, y: isMenuDown ? -6 : 6, scale: 0.98 }}
@@ -199,11 +194,7 @@ export function ClearMenu({
               visibility: placement ? 'visible' : 'hidden',
               pointerEvents: 'auto',
               overflowWrap: 'anywhere',
-              background: '#141414',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: 16,
-              padding: pending ? 10 : 4,
-              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.5)',
+              padding: pending ? 10 : 6,
               zIndex: 350
             }}
           >
@@ -215,6 +206,11 @@ export function ClearMenu({
                 <div style={{ fontSize: 12, lineHeight: 1.5, margin: '0 3px', color: 'rgba(255,255,255,0.8)' }}>
                   {scopeLabel(pending.scope)}
                 </div>
+                {filtered && (
+                  <div className="plium-clear-filter-hint">
+                    {t('item.clearFilterHint')}
+                  </div>
+                )}
                 <div aria-live="polite" style={{ fontSize: 12, fontWeight: 600, margin: '8px 3px', color: '#ffb0b0' }}>
                   {t('item.clearConfirmCount', { count: pending.ids.length })}
                 </div>
@@ -228,12 +224,13 @@ export function ClearMenu({
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                   <button type="button"
-                    onClick={() => { playButtonClickSound(); setPending(null) }}
-                    style={{ ...menuItemStyle, justifyContent: 'center', flex: 1, background: '#292929', color: '#ededed' }}>
+                    ref={cancelButtonRef}
+                    className="plium-menu-row plium-confirm-cancel"
+                    onClick={() => { playButtonClickSound(); setPending(null) }}>
                     {t('item.clearConfirmCancel')}
                   </button>
                   <button type="button" disabled={pending.ids.length === 0} onClick={confirmClear}
-                    style={{ ...menuItemStyle, justifyContent: 'center', flex: 1, background: pending.ids.length ? '#aa3030' : '#505050', color: '#fff', fontWeight: 600 }}>
+                    className="plium-menu-row plium-confirm-danger">
                     {t('item.clearConfirmAction')}
                   </button>
                 </div>
@@ -242,19 +239,17 @@ export function ClearMenu({
               <>
                 {WINDOWS.map((w) => (
                   <button key={w.key} type="button"
+                    role="menuitem"
+                    className="plium-menu-row"
                     disabled={selectClearIds(items, w.key).length === 0}
                     onClick={() => stageClear(w.key)}
-                    style={{ ...menuItemStyle, opacity: selectClearIds(items, w.key).length ? 1 : 0.35 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+>
                     {scopeLabel(w.key)}
                   </button>
                 ))}
-                <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 2px' }} />
-                <button type="button" onClick={() => stageClear('all')}
-                  style={{ ...menuItemStyle, color: '#ffa2a2' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}>
+                <div className="plium-menu-divider" />
+                <button type="button" role="menuitem" onClick={() => stageClear('all')}
+                  className="plium-menu-row plium-menu-danger">
                   {scopeLabel('all')}
                 </button>
               </>

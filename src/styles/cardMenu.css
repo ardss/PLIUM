@@ -14,10 +14,10 @@
   max-width: 240px;
   box-sizing: border-box;
   padding: 6px;
-  background: #1c1c1c;
-  border-radius: 18px;
-  box-shadow: inset 0 0 0 1px var(--divider);
-  color: rgba(255, 255, 255, 0.86);
+  background: var(--menu-surface);
+  border-radius: var(--menu-radius);
+  box-shadow: var(--menu-shadow);
+  color: var(--menu-ink);
   font-family: var(--font-ui);
   pointer-events: auto;
   user-select: none;
@@ -55,14 +55,14 @@ html[data-motion='reduce'] .card-menu.is-placed {
   align-items: center;
   gap: 10px;
   width: 100%;
-  height: 32px;
+  height: var(--menu-row-height);
   padding: 0 10px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--menu-row-radius);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: calc(13px * var(--font-scale, 1));
+  font-size: var(--menu-row-font);
   font-weight: 500;
   text-align: start;
   cursor: pointer;
@@ -73,7 +73,7 @@ html[data-motion='reduce'] .card-menu.is-placed {
 .card-menu-row:hover,
 .card-menu-row:focus-visible {
   outline: none;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--menu-hover);
   color: var(--text-primary);
 }
 
@@ -234,7 +234,7 @@ html[data-motion='reduce'] .card-meta-editor {
   color: #ffffff;
   caret-color: #ffffff;
   font-family: var(--font-ui);
-  font-size: calc(13px * var(--font-scale, 1));
+  font-size: var(--menu-row-font);
   font-weight: 500;
   outline: none;
   user-select: text;

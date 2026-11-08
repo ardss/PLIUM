@@ -683,13 +683,6 @@ export function Panel() {
               panelOpen: open,
               filtered: typeFilter !== 'all' || !!query.trim(),
               onClear: (ids) => clear(ids),
-              onClearAll: () => {
-                if (typeFilter === 'all' && !query.trim()) {
-                  clear()
-                } else {
-                  clear(clearable.map((it) => it.id))
-                }
-              }
             }}
           />
 
@@ -751,14 +744,8 @@ export function Panel() {
                     items={filteredItems}
                     disabled={clearable.length === 0}
                     panelOpen={open}
+                    filtered={typeFilter !== 'all' || !!query.trim()}
                     onClear={(ids) => clear(ids)}
-                    onClearAll={() => {
-                      if (typeFilter === 'all' && !query.trim()) {
-                        clear()
-                      } else {
-                        clear(clearable.map((it) => it.id))
-                      }
-                    }}
                   />
                 </div>
               )}

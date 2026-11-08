@@ -46,15 +46,22 @@ describe('PLIUM bulk history clearing confirmation', () => {
     expect(component).toContain("onClick={() => stageClear('all')}")
     expect(component).toContain('onClick={confirmClear}')
     expect(component).toContain('sameClearIds(currentIds, pending.ids)')
-    expect(component).toContain("if (pending.scope === 'all') onClearAll()")
-    expect(component).toContain('else onClear(currentIds)')
+    expect(component).toContain('onClear(currentIds)')
+    expect(component).not.toContain('onClearAll()')
+    expect(component).toContain('e.stopImmediatePropagation()')
+    expect(component).toContain('if (pending) {')
     expect(component).toContain('setPending(null)')
     expect(panel).toContain("filtered: typeFilter !== 'all' || !!query.trim()")
+    expect(panel).toContain("filtered={typeFilter !== 'all' || !!query.trim()}")
+    expect(panel).not.toContain('onClearAll: () => {')
+    expect(panel).not.toContain('onClearAll={() => {')
+    expect(component).toContain('ref={cancelButtonRef}')
+    expect(component).toContain('cancelButtonRef.current?.focus()')
   })
 
   it('offers clear confirm labels in English, simplified and traditional Chinese', () => {
     for(const locale of [en, zhCN, zhTW]){
-      for(const key of ['clearConfirmTitle','clearConfirmCount','clearConfirmKept','clearConfirmCancel','clearConfirmAction','clearAllFiltered'] as const){
+      for(const key of ['clearConfirmTitle','clearConfirmCount','clearConfirmKept','clearConfirmCancel','clearConfirmAction','clearAllFiltered','clearFilterHint'] as const){
         expect(locale.item[key]).toBeTruthy()
       }
     }

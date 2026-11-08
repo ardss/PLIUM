@@ -1,0 +1,96 @@
+/* PLIUM's shared contextual-menu design contract.
+   Both card right-click and bulk-clear menu use these primitives. */
+.plium-menu-surface {
+  box-sizing: border-box;
+  background: var(--menu-surface);
+  border-radius: var(--menu-radius);
+  box-shadow: var(--menu-shadow);
+  color: var(--menu-ink);
+  font-family: var(--font-ui);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.plium-menu-row {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--menu-row-height);
+  border: 0;
+  border-radius: var(--menu-row-radius);
+  background: transparent;
+  color: var(--menu-ink);
+  font-family: var(--font-ui);
+  font-size: var(--menu-row-font);
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.plium-menu-row:hover:not(:disabled),
+.plium-menu-row:focus-visible {
+  background: var(--menu-hover);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.plium-menu-row:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.plium-clear-menu .plium-menu-row {
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  white-space: normal;
+}
+
+.plium-clear-menu .plium-menu-divider {
+  height: 1px;
+  margin: 5px 10px;
+  background: var(--menu-edge);
+}
+
+.plium-clear-menu .plium-menu-danger {
+  color: var(--act-danger);
+}
+
+.plium-clear-menu .plium-menu-danger:hover:not(:disabled),
+.plium-clear-menu .plium-menu-danger:focus-visible {
+  background: var(--act-danger-bg);
+}
+
+.plium-clear-menu .plium-confirm-cancel,
+.plium-clear-menu .plium-confirm-danger {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+}
+
+.plium-clear-menu .plium-confirm-cancel {
+  background: var(--act-surface);
+}
+
+.plium-clear-menu .plium-confirm-danger {
+  color: var(--act-danger);
+  background: var(--act-danger-bg);
+}
+
+.plium-clear-menu .plium-confirm-danger:hover:not(:disabled),
+.plium-clear-menu .plium-confirm-danger:focus-visible {
+  background: rgba(255, 107, 107, 0.24);
+}
+
+.plium-clear-menu .plium-clear-filter-hint {
+  margin: 6px 3px 0;
+  color: var(--text-tertiary);
+  font-size: calc(11px * var(--font-scale, 1));
+  line-height: 1.5;
+}
+
+:root[data-motion='reduce'] .plium-menu-row {
+  transition-duration: 0.01ms;
+}

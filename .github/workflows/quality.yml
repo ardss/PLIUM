@@ -24,8 +24,20 @@ jobs:
           node-version: '22'
           cache: npm
           registry-url: https://registry.npmjs.org
-      - name: Install dependencies from lockfile
-        run: npm ci --registry=https://registry.npmjs.org
+      - name: Install dependencies from lockfile (retry transient Electron download failures)
+        shell: pwsh
+        run: |
+          # Electron's postinstall downloads a large GitHub release asset.
+          # A transient 504 must not fail an otherwise healthy Windows PR.
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            npm ci --registry=https://registry.npmjs.org
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            if ($attempt -eq 3) { throw "npm ci failed after 3 attempts" }
+            Write-Warning "npm ci attempt $attempt failed. Retrying after a brief delay."
+            Start-Sleep -Seconds (8 * $attempt)
+          }
       - name: TypeScript
         run: npm run typecheck
       - name: Unit and integration tests

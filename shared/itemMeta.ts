@@ -56,3 +56,23 @@ export function noteFromLegacy(label: unknown, tags: unknown): string | undefine
 export function isKept(item: { pinned?: boolean; note?: string }): boolean {
   return !!item.pinned || !!item.note
 }
+
+/**
+ * Server-side deletion boundary for a reviewed bulk-clear action.
+ * An explicit single/card delete uses a different path and may remove a
+ * pinned item; a history clear must never remove protected items, even if
+ * a renderer asks for their IDs.
+ */
+export function filterClearableIds<T extends { pinned?: boolean; note?: string }>(
+  ids: readonly string[],
+  getItem: (id: string) => T | null | undefined
+): string[] {
+  if (!Array.isArray(ids)) return []
+  const seen = new Set<string>()
+  return ids.filter((id) => {
+    if (typeof id !== 'string' || seen.has(id)) return false
+    seen.add(id)
+    const item = getItem(id)
+    return !!item && !isKept(item)
+  })
+}

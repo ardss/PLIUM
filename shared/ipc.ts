@@ -28,6 +28,9 @@ export interface InvokeMap {
   /** Delete a batch of items in a single atomic operation. */
   'item:delete-batch': { args: [ids: string[]]; result: ClipboardItemDto[] }
 
+  /** Clear only records that are still unpinned and without a note at execution time. */
+  'item:clear-scoped': { args: [ids: string[]]; result: ClipboardItemDto[] }
+
   /** Delete every unpinned item. */
   'item:clear': { args: []; result: ClipboardItemDto[] }
 

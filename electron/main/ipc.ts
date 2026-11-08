@@ -32,6 +32,7 @@ import { toUnpackagedFilePath, toUnpackagedFilePaths } from '../store/paths'
 import { isPasteableEmoji } from '../../shared/emoji'
 import { emojiAssetDir, readEmojiBatch, resolveIconAsset } from './imageProtocol'
 import { saveItemImages } from './saveImages'
+import { filterClearableIds } from '../../shared/itemMeta'
 
 export { isStoreBuild }
 
@@ -345,6 +346,33 @@ export function registerIpc(): void {
         clipboard.clear()
       }
       getStore().deleteBatch(ids)
+    } finally {
+      watcher.resyncSignature()
+      watcher.setPaused(loadSettings().incognito)
+    }
+    pushState.items()
+    return getStore().toDto()
+  })
+
+  handle('item:clear-scoped', async (ids) => {
+    // Keep this separate from explicit item:delete-batch. A user can
+    // intentionally delete a pinned item via card actions; bulk clearing
+    // must protect any pinned/noted item even if its metadata changed after
+    // confirmation in a different render or during an IPC await.
+    const watcher = getWatcher()
+    const safeIds = filterClearableIds(ids, (id) => getStore().get(id))
+    if (safeIds.length === 0) return getStore().toDto()
+    watcher.setPaused(true)
+    try {
+      const sig = await clipboardSignature()
+      // Re-check after the await: no protected record can slip through if
+      // its metadata changed while the clipboard signature was resolving.
+      const currentIds = filterClearableIds(safeIds, (id) => getStore().get(id))
+      const items = currentIds.map((id) => getStore().get(id)).filter((item): item is ClipboardItem => !!item)
+      if (items.some((item) => clipboardMatchesItem(item, sig))) {
+        clipboard.clear()
+      }
+      if (currentIds.length > 0) getStore().deleteBatch(currentIds)
     } finally {
       watcher.resyncSignature()
       watcher.setPaused(loadSettings().incognito)

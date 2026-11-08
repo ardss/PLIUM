@@ -65,7 +65,7 @@ describe('PLIUM shipping contracts', () => {
   })
   it('keeps only required runtime packages in production', () => {
     expect(Object.keys(pkg.dependencies).sort()).toEqual([
-      '@resvg/resvg-js', 'electron-updater', 'koffi', 'react', 'zustand'
+      '@resvg/resvg-js', 'koffi', 'react', 'zustand'
     ])
   })
   it('excludes build-only libraries and source packages from production', () => {

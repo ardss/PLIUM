@@ -1,0 +1,39 @@
+name: PLIUM quality checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-quality:
+    name: Windows quality
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - name: Install dependencies from lockfile
+        run: npm ci --registry=https://registry.npmjs.org
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Unit and integration tests
+        run: npx vitest run --maxWorkers=2 --reporter=dot
+      - name: Dependency security (runtime and build tooling)
+        run: npm audit --registry=https://registry.npmjs.org --audit-level=moderate
+      - name: Build unsigned Windows installer (CI validation only)
+        run: npm run build:win
+      - name: Verify product identity
+        run: |
+          node -e "const p=require('./package.json');if(p.name!=='plium'||p.build.productName!=='PLIUM'||p.build.appId!=='com.ardss.plium')process.exit(1)"

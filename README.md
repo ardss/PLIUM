@@ -17,7 +17,7 @@ PLIUM runs on Windows 10/11 x64. Not every third-party app accepts every drop fo
 
 ## Preview status and downloads
 
-Current Windows preview: **`0.4.0-plium.8`**, tested locally in November 2026. Source and native-interaction automated checks have passed; **public release checks are still incomplete** (publisher signing, cold reboot, every supported monitor/display scenario). **There is no official public PLIUM installer or online updater yet.**
+Current source preview: **`0.4.0-plium.9`**, tested on Windows B in November 2026; Windows A installation is independently verified before being declared complete. Source and native-interaction automated checks have passed; **public release checks are still incomplete** (publisher signing, cold reboot, every supported monitor/display scenario). **There is no official public PLIUM installer or online updater yet.**
 
 When a verified PLIUM release is published, it will appear on [PLIUM Releases](https://github.com/ardss/PLIUM/releases). **Do not use upstream Edge-Drop installers to update PLIUM.**
 
@@ -40,7 +40,7 @@ The unsigned local installer is built under `dist/`. For development use `npm ru
 
 PLIUM uses `PLIUM.exe`, AppID `com.ardss.plium` and a separate profile under `%APPDATA%\plium`. It never uses the upstream's online updater, store listing or installer identity. Historical Edge-Drop clipboard profiles are not silently replaced; migrating from an original installation requires explicit backup and verification.
 
-See [Privacy](PRIVACY.md) and [Preview release / migration notes](PLIUM-PREVIEW.md).
+See [Privacy](PRIVACY.md), [Security reporting](SECURITY.md), [Upstream history](UPSTREAM-HISTORY.md) and [Preview release / migration notes](PLIUM-PREVIEW.md).
 
 ## Feedback and contribution
 

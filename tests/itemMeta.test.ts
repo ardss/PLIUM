@@ -251,7 +251,7 @@ describe('links handed to the OS', () => {
     expect(isSafeExternalUrl('https://example.com/a?b=1')).toBe(true)
     expect(isSafeExternalUrl('http://example.com')).toBe(true)
     expect(isSafeExternalUrl('mailto:me@example.com')).toBe(true)
-    expect(isSafeExternalUrl('ms-windows-store://review/?ProductId=9P3JMHN9M4NR')).toBe(true)
+    expect(isSafeExternalUrl('ms-windows-store://review/?ProductId=9P3JMHN9M4NR')).toBe(false)
     expect(isSafeExternalUrl('file:///C:/Windows/System32/calc.exe')).toBe(false)
     expect(isSafeExternalUrl('javascript:alert(1)')).toBe(false)
     expect(isSafeExternalUrl('search-ms:query=x')).toBe(false)

@@ -13,7 +13,7 @@ export const runtime = {
  * StartupTask Id declared in resources/appx/startup-extensions.xml.
  * Must stay in sync with that file.
  */
-export const STORE_STARTUP_TASK_ID = 'EdgeDropStartup'
+export const STORE_STARTUP_TASK_ID = 'PLIUMStartup'
 
 /**
  * True when running as the Microsoft Store / MSIX package.

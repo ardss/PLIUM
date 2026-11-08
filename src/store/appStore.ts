@@ -684,7 +684,7 @@ export const useStore = create<AppState>((set, get) => ({
       const idSet = new Set(ids)
       set({ items: previousItems.filter((it) => !idSet.has(it.id)) })
       try {
-        const items = await edge.deleteBatchItems(ids)
+        const items = await edge.clearScopedItems(ids)
         const current = get().items
         if (items.length !== current.length || items.some((it, i) => it.id !== current[i]?.id)) {
           set({ items })

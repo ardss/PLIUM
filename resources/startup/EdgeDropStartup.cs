@@ -40,7 +40,7 @@ internal static class Program
         try
         {
             string action = args.Length > 0 ? args[0].Trim().ToLowerInvariant() : "get";
-            string taskId = args.Length > 1 ? args[1] : "EdgeDropStartup";
+            string taskId = args.Length > 1 ? args[1] : "PLIUMStartup";
 
             StartupTask task = Wait(StartupTask.GetAsync(taskId));
 

@@ -66,9 +66,10 @@ describe('PLIUM UI/UX shared contract',()=>{
     }
   })
 
-  it('upstream workflow patch is applied without changing PLIUM runtime',()=>{
-    const workflow=read('.github/workflows/download-count.yml')
-    expect(workflow).toContain('for attempt in 1 2 3 4; do')
-    expect(workflow).toContain('sub(/\\.0M$/,"M",m)')
+  it('quality workflow is owned by PLIUM and gates PRs',()=>{
+    const workflow=read('.github/workflows/quality.yml')
+    expect(workflow).toContain('pull_request:')
+    expect(workflow).toContain('Windows quality')
+    expect(workflow).toContain('npm audit --registry=https://registry.npmjs.org --audit-level=moderate')
   })
 })

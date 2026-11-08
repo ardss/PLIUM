@@ -1,6 +1,6 @@
 {
   "name": "plium",
-  "version": "0.4.0-plium.8",
+  "version": "0.4.0-plium.9",
   "description": "PLIUM / 叠间 - an edge clipboard shelf for Windows",
   "author": "PLIUM contributors",
   "license": "Apache-2.0",
@@ -86,14 +86,15 @@
     "@fontsource/plus-jakarta-sans": "^5.3.0",
     "@radix-ui/react-scroll-area": "^1.2.13",
     "@radix-ui/react-separator": "^1.1.11",
+    "@swc/core": "^1.16.22",
     "@types/node": "^24.19.2",
     "@types/react": "^18.2.73",
     "@types/react-dom": "^18.2.22",
     "@vitalets/google-translate-api": "^9.2.1",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^5.2.0",
     "electron": "^45.1.0",
     "electron-builder": "^26.18.1",
-    "electron-vite": "^2.1.0",
+    "electron-vite": "^5.0.0",
     "emoji-datasource-twitter": "^16.0.0",
     "framer-motion": "^11.0.24",
     "gsap": "^3.15.0",
@@ -101,14 +102,17 @@
     "react-dom": "^18.2.0",
     "svg-path-bbox": "^2.1.0",
     "typescript": "^5.4.3",
-    "vite": "^5.2.6",
-    "vitest": "^4.1.10"
+    "vite": "^7.3.7",
+    "vitest": "^4.1.12"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
-    "electron-updater": "^6.8.9",
     "koffi": "^3.1.2",
     "react": "^18.2.0",
     "zustand": "^4.5.2"
+  },
+  "overrides": {
+    "js-yaml": "^4.3.2",
+    "minimatch": "^11.0.1"
   }
 }

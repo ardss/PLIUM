@@ -40,10 +40,10 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(existsSync(join(root, 'LICENSE'))).toBe(true)
     expect(read('PLIUM-PREVIEW.md')).toContain('one row ↔ three rows')
     expect(read('PRIVACY.md')).toContain('Online update checking is **disabled**')
-    const workflow = read('.github/workflows/download-count.yml')
-    expect(workflow).toContain('workflow_dispatch')
-    expect(workflow).not.toContain('schedule:')
-    expect(workflow).not.toContain('types: [published]')
+    const workflow = read('.github/workflows/quality.yml')
+    expect(workflow).toContain('pull_request:')
+    expect(workflow).toContain('npm run typecheck')
+    expect(existsSync(join(root,'.github/workflows/download-count.yml'))).toBe(false)
   })
   it('archives imported docs and prevents accidental regeneration', () => {
     // This repository uses sparse checkout: archived docs can be committed
@@ -52,8 +52,10 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(tracked).toContain('docs/upstream-reference/FEATURES.md')
     expect(tracked).toContain('docs/upstream-reference/translation-source/en.json')
     expect(existsSync(join(root,'edge-drop-translations/en.json'))).toBe(false)
-    const generator = read('scripts/generate_translations_ts.cjs')
-    expect(generator).toContain('PLIUM_ALLOW_LEGACY_I18N_REGEN')
-    expect(generator).toContain('process.exit(1)')
+    // Old upstream translation generators must no longer be runnable in PLIUM.
+    for (const file of ['generate_translations_ts.cjs', 'generate_translations_file.py', 'build_complete_30_lang_ts.py']) {
+      expect(existsSync(join(root, 'scripts', file))).toBe(false)
+    }
+    expect(existsSync(join(root, 'src/i18n/translations.ts'))).toBe(true)
   })
 })

@@ -182,6 +182,7 @@ const api = {
   setPinned: (id: string, pinned: boolean) => invoke('item:set-pinned', id, pinned),
   deleteItem: (id: string) => invoke('item:delete', id),
   deleteBatchItems: (ids: string[]) => invoke('item:delete-batch', ids),
+  clearScopedItems: (ids: string[]) => invoke('item:clear-scoped', ids),
   clearItems: () => invoke('item:clear'),
   getFullText: (id: string) => invoke('item:get-full-text', id),
   copyItem: (id: string) => invoke('item:copy', id),

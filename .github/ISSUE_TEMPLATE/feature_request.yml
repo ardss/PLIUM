@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a user-visible PLIUM improvement
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Explain the real workflow, not just a visual idea.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: References and acceptance criteria
+      description: No private clipboard content.

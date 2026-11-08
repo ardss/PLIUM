@@ -25,6 +25,7 @@ export interface EdgeApi {
   setPinned: (id: string, pinned: boolean) => Promise<import('./types').ClipboardItemDto[]>
   deleteItem: (id: string) => Promise<import('./types').ClipboardItemDto[]>
   deleteBatchItems: (ids: string[]) => Promise<import('./types').ClipboardItemDto[]>
+  clearScopedItems: (ids: string[]) => Promise<import('./types').ClipboardItemDto[]>
   clearItems: () => Promise<import('./types').ClipboardItemDto[]>
   getFullText: (id: string) => Promise<string>
   removeSubitem: (req: DragRequest) => Promise<boolean>

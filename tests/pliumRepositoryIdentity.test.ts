@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 const root = join(__dirname, '..')
 const read = (f: string) => readFileSync(join(root, f), 'utf8')
@@ -45,8 +46,11 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(workflow).not.toContain('types: [published]')
   })
   it('archives imported docs and prevents accidental regeneration', () => {
-    expect(existsSync(join(root,'docs/upstream-reference/FEATURES.md'))).toBe(true)
-    expect(existsSync(join(root,'docs/upstream-reference/translation-source/en.json'))).toBe(true)
+    // This repository uses sparse checkout: archived docs can be committed
+    // without being physically materialized in the local worktree.
+    const tracked = execFileSync('git', ['ls-files', '--', 'docs/upstream-reference'], { cwd: root, encoding: 'utf8' })
+    expect(tracked).toContain('docs/upstream-reference/FEATURES.md')
+    expect(tracked).toContain('docs/upstream-reference/translation-source/en.json')
     expect(existsSync(join(root,'edge-drop-translations/en.json'))).toBe(false)
     const generator = read('scripts/generate_translations_ts.cjs')
     expect(generator).toContain('PLIUM_ALLOW_LEGACY_I18N_REGEN')

@@ -4,7 +4,7 @@ PLIUM is an independent Windows clipboard shelf forked from [Edge-Drop](https://
 
 ## Release and migration policy
 
-- Current verified Windows A local preview: `0.4.0-plium.7`. No public signed build, official auto-update channel or Microsoft Store/MSIX package is offered.
+- Current verified Windows A local preview: `0.4.0-plium.8`. No public signed build, official auto-update channel or Microsoft Store/MSIX package is offered.
 - Preserve original Edge-Drop program/data and a previous PLIUM installer as rollback assets. Never run two clipboard watchers concurrently.
 - Do not install upstream Edge-Drop packages as PLIUM upgrades; use only independently built and checksum-verified PLIUM NSIS installers.
 - The original encrypted clipboard index, Chromium `Local State` and image payloads are private, and must never appear in Git, debug logs or issues.
@@ -19,7 +19,7 @@ PLIUM is an independent Windows clipboard shelf forked from [Edge-Drop](https://
 
 ## Known release gates
 
-Windows B source/unit and isolated desktop GUI tests have passed. Windows A received `0.4.0-plium.7`, with installer hash, backup, history preservation, running instance and autostart checked. Public signing, full real dual-monitor QA and reboot/cold-start release checks remain outstanding.
+Windows B source/unit and isolated desktop GUI tests have passed. Windows A received `0.4.0-plium.8`, with installer hash, backup, history preservation, running instance and autostart checked. Public signing, full real dual-monitor QA and reboot/cold-start release checks remain outstanding.
 
 ## Upstream
 

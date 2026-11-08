@@ -22,7 +22,6 @@ import {
   CloseIcon,
   GithubOctocatLogo,
   GlobeIcon,
-  HeartIcon,
   InfoIcon,
   LogOutIcon
 } from './icons'
@@ -391,18 +390,7 @@ export function Settings({
         <div className="settings-support-actions">
           <button
             type="button"
-            className="settings-support-btn is-primary source-repo-btn"
-            onClick={() => {
-              playButtonClickSound()
-              window.open('https://github.com/ardss/PLIUM', '_blank')
-            }}
-          >
-            <HeartIcon width={13} height={13} />
-            <span>PLIUM 开源代码</span>
-          </button>
-          <button
-            type="button"
-            className="settings-support-btn github-promo-btn"
+            className="settings-support-btn is-primary github-promo-btn"
             onClick={() => {
               playButtonClickSound()
               window.open('https://github.com/ardss/PLIUM', '_blank')
@@ -416,7 +404,7 @@ export function Settings({
 
       <section className={`settings-support settings-about${isHorizontal ? ' is-h' : ''}`} data-card="about">
         <h3 className="set-group-label">{t('groups.aboutEdgeDrop') || 'ABOUT PLIUM'}</h3>
-        <div className="settings-about-title">PLIUM · 叠间 {currentVersion || '0.3.1'}</div>
+        <div className="settings-about-title">PLIUM · 叠间 {currentVersion || 'preview'}</div>
         <div className="settings-support-tagline">{t('footer.feedbackDesc')}</div>
         <div className="settings-support-actions">
           <button
@@ -760,7 +748,7 @@ export function Settings({
           : status === 'error'
             ? t('behaviour.tryAgain')
             : t('behaviour.checkForUpdates')
-    const version = `${t('footer.version')} ${currentVersion || '0.3.1'}`
+    const version = `${t('footer.version')} ${currentVersion || 'preview'}`
     // The title stays put; only the line under it reports the state.
     return {
       id: 'update-check',

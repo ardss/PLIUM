@@ -198,13 +198,14 @@ describe('Horizontal Card Shelf Settings Layout', () => {
     expect(css).toContain('.placement-3way-wrap .pill')
   })
 
-  it('After the settings come two cards: Community & Support, then About Edge-Drop', () => {
+  it('After the settings come two cards: Community & Support, then About PLIUM', () => {
     const src = read('src/components/Settings.tsx')
     const cards = src.slice(src.indexOf('const renderClosingCards = () =>'), src.indexOf('const handleOpenChangelog'))
     const support = cards.slice(0, cards.indexOf('data-card="about"'))
     const about = cards.slice(cards.indexOf('data-card="about"'))
     expect(support).toContain("t('footer.supportTagline')")
-    expect(support).toContain('<span>PLIUM 开源代码</span>')
+    expect(support).not.toContain('HeartIcon')
+    expect(support.match(/https:\/\/github.com\/ardss\/PLIUM/g)).toHaveLength(1)
     expect(support).not.toContain("t('footer.supportDev')")
     expect(support).toContain("<span>{t('footer.starOnGithub')}</span>")
     expect(about).toContain("t('groups.aboutEdgeDrop')")

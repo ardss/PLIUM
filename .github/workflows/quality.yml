@@ -53,6 +53,12 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci --ignore-scripts --registry=https://registry.npmjs.org
+      - name: Install verified Electron runtime for native-module tests
+        env:
+          # npm ci skips postinstall, so tests that import electron need this explicitly.
+          ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/
+          ELECTRON_CUSTOM_DIR: '{{ version }}'
+        run: node node_modules/electron/install.js
       - name: TypeScript
         run: npm run typecheck
       - name: Unit and integration tests
@@ -65,10 +71,7 @@ jobs:
           # Verified mirror for Electron release ZIPs; @electron/get verifies upstream SHA-256.
           ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/
           ELECTRON_CUSTOM_DIR: '{{ version }}'
-        run: |
-          node node_modules/electron/install.js
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          npm run build:win
+        run: npm run build:win
       - name: Verify product identity
         run: |
           node -e "const p=require('./package.json');if(p.name!=='plium'||p.build.productName!=='PLIUM'||p.build.appId!=='com.ardss.plium')process.exit(1)"

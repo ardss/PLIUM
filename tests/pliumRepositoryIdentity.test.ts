@@ -71,6 +71,8 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(workflow).toContain('ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/')
     expect(workflow).toContain("ELECTRON_CUSTOM_DIR: '{{ version }}'")
     expect(workflow).toContain('node node_modules/electron/install.js')
+    expect(workflow.indexOf('Install verified Electron runtime for native-module tests')).toBeLessThan(workflow.indexOf('Unit and integration tests'))
+    expect(workflow).toContain('run: npm run build:win')
     expect(existsSync(join(root,'.github/workflows/download-count.yml'))).toBe(false)
   })
   it('never implicitly publishes unsigned Windows installers from CI', () => {

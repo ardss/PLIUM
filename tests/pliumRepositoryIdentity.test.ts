@@ -59,6 +59,8 @@ describe('PLIUM public-repository identity and safety', () => {
     const workflow = read('.github/workflows/quality.yml')
     expect(workflow).toContain('pull_request:')
     expect(workflow).toContain('npm run typecheck')
+    expect(workflow).toContain('uses: actions/checkout@v7')
+    expect(workflow).toContain('uses: actions/setup-node@v7')
     expect(workflow).toContain('fetch-depth: 2')
     expect(workflow).toContain("git diff --name-only 'HEAD^1' 'HEAD'")
     expect(workflow).toContain("ELECTRON_SKIP_BINARY_DOWNLOAD: '1'")

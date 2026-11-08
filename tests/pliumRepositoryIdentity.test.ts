@@ -59,9 +59,10 @@ describe('PLIUM public-repository identity and safety', () => {
     const workflow = read('.github/workflows/quality.yml')
     expect(workflow).toContain('pull_request:')
     expect(workflow).toContain('npm run typecheck')
-    expect(workflow).toContain('$attempt -le 3')
-    expect(workflow).toContain('npm ci --registry=https://registry.npmjs.org')
-    expect(workflow).toContain('if ($LASTEXITCODE -eq 0) { exit 0 }')
+    expect(workflow).toContain('fetch-depth: 2')
+    expect(workflow).toContain("git diff --name-only 'HEAD^1' 'HEAD'")
+    expect(workflow).toContain("ELECTRON_SKIP_BINARY_DOWNLOAD: '1'")
+    expect(workflow).toContain("if: steps.impact.outputs.package == 'true'")
     expect(existsSync(join(root,'.github/workflows/download-count.yml'))).toBe(false)
   })
   it('never implicitly publishes unsigned Windows installers from CI', () => {

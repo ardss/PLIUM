@@ -18,13 +18,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           registry-url: https://registry.npmjs.org
+      - name: Determine if Windows packaging is required
+        id: impact
+        shell: pwsh
+        run: |
+          # Compare against the first parent of either a PR merge or main push.
+          $changed = @(git diff --name-only 'HEAD^1' 'HEAD')
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot determine changed files' }
+          $runtime = @($changed | Where-Object {
+            $_ -notmatch '^(README\.md$|docs/|\.github/|tests/|PLIUM-PREVIEW\.md$|SECURITY\.md$|UPSTREAM-HISTORY\.md$|PRIVACY\.md$|CODE_OF_CONDUCT\.md$)'
+          })
+          $required = if ($runtime.Count -gt 0) { 'true' } else { 'false' }
+          "package=$required" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host "Windows packaging required: $required (runtime files: $($runtime.Count))"
       - name: Install dependencies from lockfile
+        # Typecheck, unit tests and audit don't require a 130 MB Electron exe.
+        # Install it only when packaging runtime-affecting changes.
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: npm ci --registry=https://registry.npmjs.org
       - name: TypeScript
         run: npm run typecheck
@@ -33,6 +52,7 @@ jobs:
       - name: Dependency security (runtime and build tooling)
         run: npm audit --registry=https://registry.npmjs.org --audit-level=moderate
       - name: Build unsigned Windows installer (CI validation only)
+        if: steps.impact.outputs.package == 'true'
         run: npm run build:win
       - name: Verify product identity
         run: |

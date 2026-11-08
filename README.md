@@ -4,6 +4,21 @@
 
 > **Independent open-source fork.** PLIUM is developed from [Edge-Drop](https://github.com/Deepender25/Edge-Drop) (Apache-2.0). It is **not** Edge-Drop's official application, Microsoft Store edition, website or update channel. See [Attribution](#attribution).
 
+## Actual PLIUM interface
+
+<p align="center">
+  <img src="docs/media/plium-top-expanded.png" width="960" alt="Real PLIUM 0.4.0-plium.9 desktop screenshot: top Dock expanded to three rows with synthetic example clipboard entries." />
+</p>
+
+<p align="center"><em>Expanded top Dock ? three rows</em></p>
+
+<p align="center">
+  <img src="docs/media/plium-top-compact.png" width="730" alt="Real PLIUM desktop screenshot: compact single-row top Dock." />
+  <img src="docs/media/plium-side.png" width="215" alt="Real PLIUM desktop screenshot: vertical side Dock with search and clipboard cards." />
+</p>
+
+<sub>All three images were captured from the actual PLIUM 0.4.0-plium.9 Electron application running on Windows B with an isolated profile and synthetic demo clipboard data. They are not upstream Edge-Drop images, renders or mockups, and contain no real user clipboard history.</sub>
+
 ## Features
 
 - **Edge shelf** that appears at the screen edge and gets out of your way.

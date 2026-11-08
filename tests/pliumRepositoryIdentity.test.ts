@@ -18,6 +18,22 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(readme).not.toContain('edgedrop.app')
     expect(readme).not.toContain('apps.microsoft.com')
   })
+  it('shows PLIUM screenshots captured with synthetic rather than private data', () => {
+    const readme = read('README.md')
+    for (const file of [
+      'plium-top-compact.png',
+      'plium-top-expanded.png',
+      'plium-side.png'
+    ]) {
+      const path = join(root, 'docs', 'media', file)
+      const bytes = readFileSync(path)
+      expect(bytes.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+      expect(bytes.length).toBeGreaterThan(10000)
+      expect(readme).toContain('docs/media/' + file)
+    }
+    expect(readme).toContain('isolated profile and synthetic demo clipboard data')
+    expect(readme).toContain('not upstream Edge-Drop images')
+  })
   it('uses PLIUM links in both active settings and header', () => {
     for (const file of ['src/components/Header.tsx','src/components/Settings.tsx']) {
       const src = read(file)
@@ -43,6 +59,10 @@ describe('PLIUM public-repository identity and safety', () => {
     const workflow = read('.github/workflows/quality.yml')
     expect(workflow).toContain('pull_request:')
     expect(workflow).toContain('npm run typecheck')
+    expect(workflow).toContain('fetch-depth: 2')
+    expect(workflow).toContain("git diff --name-only 'HEAD^1' 'HEAD'")
+    expect(workflow).toContain("ELECTRON_SKIP_BINARY_DOWNLOAD: '1'")
+    expect(workflow).toContain("if: steps.impact.outputs.package == 'true'")
     expect(existsSync(join(root,'.github/workflows/download-count.yml'))).toBe(false)
   })
   it('never implicitly publishes unsigned Windows installers from CI', () => {

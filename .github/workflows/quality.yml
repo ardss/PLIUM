@@ -68,9 +68,10 @@ jobs:
       - name: Build unsigned Windows installer (CI validation only)
         if: steps.impact.outputs.package == 'true'
         env:
-          # Verified mirror for Electron release ZIPs; @electron/get verifies upstream SHA-256.
+          # Electron ZIP and electron-builder NSIS tools use separate verified mirrors.
           ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/
           ELECTRON_CUSTOM_DIR: '{{ version }}'
+          ELECTRON_BUILDER_BINARIES_MIRROR: https://mirrors.huaweicloud.com/electron-builder-binaries/
         run: npm run build:win
       - name: Verify product identity
         run: |

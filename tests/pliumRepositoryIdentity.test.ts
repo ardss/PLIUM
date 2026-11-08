@@ -69,6 +69,7 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(workflow).toContain('Force Windows installer build even for docs-only changes')
     expect(workflow).toContain("$force = '${{ github.event_name }}' -eq 'workflow_dispatch'")
     expect(workflow).toContain('ELECTRON_MIRROR: https://mirrors.huaweicloud.com/electron/')
+    expect(workflow).toContain('ELECTRON_BUILDER_BINARIES_MIRROR: https://mirrors.huaweicloud.com/electron-builder-binaries/')
     expect(workflow).toContain("ELECTRON_CUSTOM_DIR: '{{ version }}'")
     expect(workflow).toContain('node node_modules/electron/install.js')
     expect(workflow.indexOf('Install verified Electron runtime for native-module tests')).toBeLessThan(workflow.indexOf('Unit and integration tests'))

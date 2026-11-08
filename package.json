@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "build:github": "npm run build && electron-builder --win nsis -c.extraMetadata.buildTarget=github",
+    "build:github": "npm run build && electron-builder --win nsis -c.extraMetadata.buildTarget=github --publish never",
     "build:store": "node -e \"console.error('PLIUM MSIX preview distribution is disabled');process.exit(1)\"",
     "build:msix": "node -e \"console.error('PLIUM MSIX preview distribution is disabled');process.exit(1)\"",
     "build:win": "npm run build:github",

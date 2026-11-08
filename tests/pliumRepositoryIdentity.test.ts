@@ -45,6 +45,12 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(workflow).toContain('npm run typecheck')
     expect(existsSync(join(root,'.github/workflows/download-count.yml'))).toBe(false)
   })
+  it('never implicitly publishes unsigned Windows installers from CI', () => {
+    const pkg = JSON.parse(read('package.json'))
+    expect(pkg.scripts['build:github']).toContain('--publish never')
+    expect(pkg.scripts['build:win']).toBe('npm run build:github')
+    expect(read('.github/workflows/quality.yml')).toContain('run: npm run build:win')
+  })
   it('archives imported docs and prevents accidental regeneration', () => {
     // This repository uses sparse checkout: archived docs can be committed
     // without being physically materialized in the local worktree.

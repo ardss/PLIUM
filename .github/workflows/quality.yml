@@ -17,11 +17,11 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
       - name: Node 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -40,11 +40,12 @@ jobs:
           "package=$required" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           Write-Host "Windows packaging required: $required (runtime files: $($runtime.Count))"
       - name: Install dependencies from lockfile
-        # Typecheck, unit tests and audit don't require a 130 MB Electron exe.
-        # Install it only when packaging runtime-affecting changes.
+        # PLIUM's postinstall runs install-electron regardless of skip env vars.
+        # Tests and the dependency audit do not need Electron's 130 MB binary.
+        # The separate conditional packaging step validates runtime changes.
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-        run: npm ci --registry=https://registry.npmjs.org
+        run: npm ci --ignore-scripts --registry=https://registry.npmjs.org
       - name: TypeScript
         run: npm run typecheck
       - name: Unit and integration tests

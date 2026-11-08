@@ -60,6 +60,15 @@ describe('note normalization (shared, used by main for every write)', () => {
 })
 
 describe('ItemStore notes', () => {
+  // Tests use debounced persistence: pending timers must be flushed before
+  // deleting the temporary profile, otherwise they can log after Vitest
+  // tears down the worker and produce EnvironmentTeardownError.
+  const managedStores: ItemStore[] = []
+  const makeStore = (): ItemStore => {
+    const instance = new ItemStore()
+    managedStores.push(instance)
+    return instance
+  }
   beforeEach(() => {
     const stamp = `${Date.now()}-${Math.random().toString(16).slice(2)}`
     fsRoots.userData = join(tmpdir(), `ed-meta-${stamp}`)
@@ -69,6 +78,8 @@ describe('ItemStore notes', () => {
     }
   })
   afterEach(() => {
+    for (const store of managedStores) store.persistSync()
+    managedStores.length = 0
     try { rmSync(fsRoots.userData, { recursive: true, force: true }) } catch { /* ignore */ }
     try { rmSync(fsRoots.home, { recursive: true, force: true }) } catch { /* ignore */ }
   })
@@ -76,7 +87,7 @@ describe('ItemStore notes', () => {
   const text = (t: string) => ({ kind: 'text' as const, text: t, isUrl: false })
 
   it('saves the cleaned note without pinning, and it survives a restart', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     store.add(text('secret'), 50)
     const id = store.list()[0].id
     expect(store.setMeta(id, { note: '  Office   Wi-Fi ' })).toBe(true)
@@ -86,13 +97,13 @@ describe('ItemStore notes', () => {
     expect(store.toDto()[0]).toMatchObject({ note: 'Office Wi-Fi', pinned: false })
 
     store.persistSync()
-    const reopened = new ItemStore()
+    const reopened = makeStore()
     reopened.load()
     expect(reopened.get(id)).toMatchObject({ note: 'Office Wi-Fi', pinned: false })
   })
 
   it('removing the note removes the field and leaves the pin alone', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     store.add(text('a'), 50)
     const id = store.list()[0].id
     store.setPinned(id, true)
@@ -107,7 +118,7 @@ describe('ItemStore notes', () => {
   })
 
   it('a noted item is kept by the history limit, auto-delete and clear', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     store.add(text('keep me'), 3)
     const keep = store.list()[0].id
     store.setMeta(keep, { note: 'Keep' })
@@ -124,7 +135,7 @@ describe('ItemStore notes', () => {
   })
 
   it('copying the same content again keeps its note', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     store.add(text('same'), 50)
     const id = store.list()[0].id
     store.setMeta(id, { note: 'N' })
@@ -136,7 +147,7 @@ describe('ItemStore notes', () => {
   })
 
   it('merging joins both notes on the target', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     const files = (p: string) => ({ kind: 'files' as const, paths: [join(fsRoots.home, p)] })
     for (const p of ['a.txt', 'b.txt', 'c.txt']) writeFileSync(join(fsRoots.home, p), p)
     store.add(files('a.txt'), 50)
@@ -161,7 +172,7 @@ describe('ItemStore notes', () => {
       ]
     }
     writeFileSync(PATHS.indexFile(), JSON.stringify(saved))
-    const store = new ItemStore()
+    const store = makeStore()
     store.load()
     expect(store.get('x1')).toMatchObject({ note: 'Wifi password · home network', pinned: true })
     expect('label' in store.get('x1')!).toBe(false)
@@ -172,7 +183,7 @@ describe('ItemStore notes', () => {
   })
 
   it('a link copied with its page title keeps it; a repeat copy can bring it; old saved links learn it on load', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     const link = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
     const html = `<html><body><!--StartFragment--><a href="${link}">Never Gonna Give You Up</a><!--EndFragment--></body></html>`
     store.add({ kind: 'text', text: link, html, isUrl: true }, 50)
@@ -187,13 +198,13 @@ describe('ItemStore notes', () => {
     expect(store.toDto()[0].data).not.toHaveProperty('linkTitle', expect.anything())
     // saved before titles were kept
     writeFileSync(PATHS.indexFile(), JSON.stringify({ items: [{ id: 'old', data: { kind: 'text', text: 'https://e.com/x', html: '<a href="https://e.com/x">Old Page</a>', isUrl: true }, capturedAt: 1, hitCount: 1, pinned: true }] }))
-    const reopened = new ItemStore()
+    const reopened = makeStore()
     reopened.load()
     expect(reopened.toDto()[0].data).toMatchObject({ linkTitle: 'Old Page' })
   })
 
   it('the DTO tells the renderer when a text item has html, without sending the html', () => {
-    const store = new ItemStore()
+    const store = makeStore()
     store.add({ kind: 'text', text: 'rich', html: '<b>rich</b>', isUrl: false }, 50)
     store.add(text('plain'), 50)
     const [plain, rich] = store.toDto()

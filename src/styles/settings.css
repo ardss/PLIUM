@@ -1669,7 +1669,7 @@ html[data-motion='reduce'] .set-row-icon-btn.is-busy svg {
 }
 
 /* After the settings, two cards with one job each: Community & Support
-   (tagline, Ko-fi as the one white button, GitHub) and About Edge-Drop
+   (source repository, feedback) and About PLIUM
    (version, feedback, quit). They end every tab and scroll with it. */
 .settings-support {
   margin-top: 18px;

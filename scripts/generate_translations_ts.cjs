@@ -1,3 +1,9 @@
+// Historical Edge-Drop translation importer. This is NOT the source of truth
+// for PLIUM's 31-locale interface. Regeneration would drop PLIUM additions.
+if (process.env.PLIUM_ALLOW_LEGACY_I18N_REGEN !== '1') {
+  console.error('PLIUM translations are maintained in src/i18n/translations.ts. Legacy regeneration is disabled.');
+  process.exit(1);
+}
 const fs = require('fs');
 const path = require('path');
 
@@ -404,7 +410,7 @@ const overrides = {
 };
 
 function getFullDict(langCode) {
-  const jsonPath = path.join(__dirname, '..', 'edge-drop-translations', `${langCode}.json`);
+  const jsonPath = path.join(__dirname, '..', 'docs', 'upstream-reference', 'translation-source', `${langCode}.json`);
   let jsonDict = {};
   if (fs.existsSync(jsonPath)) {
     try {

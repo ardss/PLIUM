@@ -24,8 +24,7 @@ import {
   GlobeIcon,
   HeartIcon,
   InfoIcon,
-  LogOutIcon,
-  MicrosoftStoreLogo
+  LogOutIcon
 } from './icons'
 import { HotkeyRecorder } from './HotkeyRecorder'
 import { SlideCommit } from './SlideCommit'
@@ -380,7 +379,7 @@ export function Settings({
   )
 
   // ── After the settings: two cards, each with one job ──────────────────────
-  // Community & Support (why, then Ko-fi / GitHub) and About Edge-Drop
+  // PLIUM community/source and About (not the upstream store or donations)
   // (version, feedback, quit). They end every tab: in the top dock they scroll
   // in after the last group instead of staying pinned.
   // (What's New lives on the header's (i) button.)
@@ -392,40 +391,26 @@ export function Settings({
         <div className="settings-support-actions">
           <button
             type="button"
-            className="settings-support-btn is-primary kofi-support-btn"
+            className="settings-support-btn is-primary source-repo-btn"
             onClick={() => {
               playButtonClickSound()
-              window.open('https://github.com/ardss/Edge-Drop', '_blank')
+              window.open('https://github.com/ardss/PLIUM', '_blank')
             }}
           >
             <HeartIcon width={13} height={13} />
             <span>PLIUM 开源代码</span>
           </button>
-          {isStoreBuild ? (
-            <button
-              type="button"
-              className="settings-support-btn store-review-promo-btn"
-              onClick={() => {
-                playButtonClickSound()
-                window.open('ms-windows-store://review/?ProductId=9P3JMHN9M4NR', '_blank')
-              }}
-            >
-              <MicrosoftStoreLogo width={13} height={13} className="store-logo-icon" />
-              <span>{t('footer.reviewOnStore')}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="settings-support-btn github-promo-btn"
-              onClick={() => {
-                playButtonClickSound()
-                window.open('https://github.com/ardss/Edge-Drop', '_blank')
-              }}
-            >
-              <GithubOctocatLogo width={13} height={13} className="github-octocat-icon" />
-              <span>{t('footer.starOnGithub')}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="settings-support-btn github-promo-btn"
+            onClick={() => {
+              playButtonClickSound()
+              window.open('https://github.com/ardss/PLIUM', '_blank')
+            }}
+          >
+            <GithubOctocatLogo width={13} height={13} className="github-octocat-icon" />
+            <span>{t('footer.starOnGithub')}</span>
+          </button>
         </div>
       </section>
 
@@ -439,7 +424,7 @@ export function Settings({
             className="settings-support-btn"
             onClick={() => {
               playButtonClickSound()
-              window.open('https://github.com/ardss/Edge-Drop/issues', '_blank')
+              window.open('https://github.com/ardss/PLIUM/issues', '_blank')
             }}
           >
             <span>{t('footer.submitFeedback')}</span>
@@ -466,7 +451,7 @@ export function Settings({
     if (targetVersion) {
       patch({ lastSeenChangelogVersion: targetVersion })
     }
-    window.open('https://github.com/ardss/Edge-Drop', '_blank')
+    window.open('https://github.com/ardss/PLIUM', '_blank')
   }
 
   // ── Promoted Top Update Card Renderer (Vertical Layout) ────────────────────

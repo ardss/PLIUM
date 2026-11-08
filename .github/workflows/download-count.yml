@@ -3,13 +3,11 @@
 # checks for updates, so it runs about eight times higher than real downloads.
 # The count is written to downloads.json on the `stats` branch (replaced each run, so main stays clean), and
 # the badge reads it through shields.io's endpoint badge.
-name: Download count
+name: PLIUM download count (manual preview)
 
+# This workflow is paused until a genuine PLIUM release exists.
+# Manual execution only; never count upstream's official installers.
 on:
-  schedule:
-    - cron: '17 3 * * *' # daily
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:

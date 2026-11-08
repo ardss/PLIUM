@@ -46,7 +46,7 @@ export function Header({ isHorizontal = false, itemCount, clearProps, onDockRows
     if (currentVersion) {
       patchSettings({ lastSeenChangelogVersion: currentVersion })
     }
-    window.open('https://github.com/ardss/Edge-Drop', '_blank')
+    window.open('https://github.com/ardss/PLIUM', '_blank')
   }
 
   const typeFilter = useStore((s) => s.typeFilter)

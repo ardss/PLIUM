@@ -25,7 +25,8 @@ import { onboardingDue } from '../../shared/onboarding'
 import { startFullscreenMonitor, stopFullscreenMonitor, triggerFullscreenCheck } from './fullscreen'
 import { flushStagedTempRegistry } from './stagedTemp'
 import { extname, join, normalize } from 'node:path'
-import { existsSync, createReadStream } from 'node:fs'
+import { existsSync } from 'node:fs'
+import { fileBodyFromPath } from './fileStream'
 import { createHash } from 'node:crypto'
 import { resolveStoredImage, resolveEmojiAsset, resolveIconAsset, emojiAssetDir } from './imageProtocol'
 import { getThumbnailPayloadScheduled, thumbnailCacheControl } from './thumbnailCache'
@@ -191,8 +192,7 @@ function registerImageProtocol(): void {
         })
         const filePath = resolveEmojiAsset(dir, fileName)
         if (!filePath) return new Response('Not found', { status: 404 })
-        const stream = createReadStream(filePath)
-        const body = new Response(stream as unknown as ReadableStream<Uint8Array>).body
+        const body = fileBodyFromPath(filePath)
         return new Response(body, {
           status: 200,
           headers: new Headers({
@@ -210,8 +210,7 @@ function registerImageProtocol(): void {
         // and packaged (inside asar, readable via fs).
         const filePath = resolveIconAsset(join(app.getAppPath(), 'resources', 'file-icons'), fileName)
         if (!filePath) return new Response('Not found', { status: 404 })
-        const stream = createReadStream(filePath)
-        const body = new Response(stream as unknown as ReadableStream<Uint8Array>).body
+        const body = fileBodyFromPath(filePath)
         return new Response(body, {
           status: 200,
           headers: new Headers({
@@ -248,8 +247,7 @@ function registerImageProtocol(): void {
           else if (ext === '.bmp') contentType = 'image/bmp'
           else if (ext === '.avif') contentType = 'image/avif'
 
-          const stream = createReadStream(filePath)
-          const body = new Response(stream as unknown as ReadableStream<Uint8Array>).body
+          const body = fileBodyFromPath(filePath)
           return new Response(body, {
             status: 200,
             headers: new Headers({
@@ -271,8 +269,7 @@ function registerImageProtocol(): void {
         return new Response('Not found', { status: 404 })
       }
 
-      const stream = createReadStream(storedImage.filePath)
-      const body = new Response(stream as unknown as ReadableStream<Uint8Array>).body
+      const body = fileBodyFromPath(storedImage.filePath)
       const headers = new Headers({
         'Content-Type': storedImage.contentType,
         'Cache-Control': 'no-cache',
@@ -297,8 +294,7 @@ async function createThumbnailResponse(filePath: string, isStoredCapture: boolea
   // SVG files are vector XML documents; stream them directly with correct MIME type
   // rather than failing inside nativeImage.createFromPath (which only supports raster bitmaps).
   if (ext === '.svg') {
-    const stream = createReadStream(filePath)
-    const body = new Response(stream as unknown as ReadableStream<Uint8Array>).body
+    const body = fileBodyFromPath(filePath)
     return new Response(body, {
       status: 200,
       headers: new Headers({

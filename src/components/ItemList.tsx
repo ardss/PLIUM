@@ -603,7 +603,28 @@ export function ItemList() {
       }
     }
     if (reduceMotion || typeof list.animate !== 'function') return
-    list.querySelectorAll<HTMLElement>('.list-stack .item').forEach((el) => {
+    const cards = Array.from(list.querySelectorAll<HTMLElement>('.list-stack .item'))
+    // First cancel old transform animations, then batch-read all final positions.
+    // Never interleave layout reads with el.animate() writes: doing so forces
+    // repeated synchronous layouts when switching a long clipboard history.
+    for (const el of cards) {
+      const id = el.querySelector<HTMLElement>('.item-main')?.dataset.id
+      if (!id || !snap.has(id)) continue
+      for (const animation of el.getAnimations()) {
+        const effect = animation.effect as KeyframeEffect | null
+        const frames = (effect?.getKeyframes?.() ?? []) as Array<Record<string, unknown>>
+        if (frames.some((frame) => typeof frame.transform === 'string' && frame.transform !== 'none')) {
+          animation.cancel()
+        }
+      }
+    }
+    const nextRects = new Map<HTMLElement, ReturnType<typeof cardVisualPos>>()
+    for (const el of cards) {
+      const id = el.querySelector<HTMLElement>('.item-main')?.dataset.id
+      if (id && snap.has(id)) nextRects.set(el, cardVisualPos(el))
+    }
+    const viewport = list.getBoundingClientRect()
+    cards.forEach((el) => {
       const id = el.querySelector<HTMLElement>('.item-main')?.dataset.id
       if (!id) return
       const from = snap.get(id)
@@ -613,13 +634,8 @@ export function ItemList() {
       // getBoundingClientRect() still includes an old WAAPI transform until
       // cancellation, so measuring "to" first causes a reversal snap.
       // Do not cancel opacity/copy-ripple animations.
-      for (const a of el.getAnimations()) {
-        const effect = a.effect as KeyframeEffect | null
-        const frames = (effect?.getKeyframes?.() ?? []) as Array<Record<string, unknown>>
-        if (frames.some((f) => typeof f.transform === 'string' && f.transform !== 'none')) a.cancel()
-      }
-      const to = cardVisualPos(el)
-      const viewport = list.getBoundingClientRect()
+      const to = nextRects.get(el)
+      if (!to) return
       // Do not animate cards that are offscreen at BOTH endpoints. A scrolled
       // 3-row -> 1-row switch can move a virtualized card by 2000+px while
       // its entire trajectory remains clipped; these wasted composited

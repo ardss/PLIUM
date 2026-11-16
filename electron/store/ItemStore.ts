@@ -210,8 +210,7 @@ export class ItemStore {
           const linkTitle = linkTitleFromHtml(it.data.html, it.data.text.trim())
           if (linkTitle) it.data.linkTitle = linkTitle
         }
-        if (!it.data.hasFullPayload && it.data.text.length > 300) {
-          this.writeTextPayload(it.id, it.data.text)
+        if (!it.data.hasFullPayload && it.data.text.length > 300 && this.writeTextPayload(it.id, it.data.text)) {
           it.data.hasFullPayload = true
           it.data.previewText = it.data.text.slice(0, 300)
           it.data.text = it.data.previewText
@@ -378,9 +377,8 @@ export class ItemStore {
    * Returns true if the list actually changed (so callers can decide to push).
    */
   add(data: ItemData, limit: number): boolean {
-    if (data.kind === 'text' && data.text.length > 500000) {
-      data = { ...data, text: data.text.slice(0, 500000) }
-    }
+    // Never truncate clipboard text before creating the disk payload.
+    // A user may copy a large document or source file and expect exact recovery.
     const sig = contentSignature(data)
     const existingId = this.sigToId.get(sig)
     const now = Date.now()
@@ -414,8 +412,7 @@ export class ItemStore {
       if (data.html && data.html.length > MAX_ITEM_HTML_CHARS) {
         delete data.html
       }
-      if (data.text.length > 300) {
-        this.writeTextPayload(id, data.text)
+      if (data.text.length > 300 && this.writeTextPayload(id, data.text)) {
         finalData = {
           ...data,
           hasFullPayload: true,
@@ -911,10 +908,29 @@ export class ItemStore {
     return join(PATHS.payloadsDir(), `${id}.txt`)
   }
 
-  private writeTextPayload(id: string, text: string): void {
+  // Existing .txt sidecars were plaintext. New sidecars are DPAPI-encrypted and
+  // self-identifying so old profiles remain readable during gradual migration.
+  private static readonly ENCRYPTED_TEXT_PREFIX = 'PLIUM-DPAPI-TEXT-V1:'
+
+  /** Only report success after the COMPLETE payload is safely persisted. */
+  private writeTextPayload(id: string, text: string): boolean {
     try {
-      writeFileSync(this.textPayloadPath(id), text, 'utf8')
-    } catch { /* ignore */ }
+      // Do not create new plaintext sidecars if Windows DPAPI is unavailable.
+      // The caller keeps the full text inline instead of committing a preview
+      // that could never be recovered after a failed/unencrypted disk write.
+      if (!safeStorage.isEncryptionAvailable()) return false
+      const ciphertext = safeStorage.encryptString(text)
+      const roundTrip = safeStorage.decryptString(ciphertext)
+      if (roundTrip !== text) throw new Error('Text payload encryption verification failed')
+      writeFileAtomic(
+        this.textPayloadPath(id),
+        ItemStore.ENCRYPTED_TEXT_PREFIX + ciphertext.toString('base64')
+      )
+      return true
+    } catch (err) {
+      console.warn('[ItemStore] Full text sidecar could not be stored; retaining inline text:', err)
+      return false
+    }
   }
 
   private removeTextPayload(id: string): void {
@@ -931,9 +947,23 @@ export class ItemStore {
       try {
         const p = this.textPayloadPath(id)
         if (existsSync(p)) {
-          return readFileSync(p, 'utf8')
+          const stored = readFileSync(p, 'utf8')
+          if (stored.startsWith(ItemStore.ENCRYPTED_TEXT_PREFIX)) {
+            // A temporary key/DPAPI failure must not overwrite the ciphertext.
+            if (!safeStorage.isEncryptionAvailable()) return item.data.text
+            const bytes = Buffer.from(stored.slice(ItemStore.ENCRYPTED_TEXT_PREFIX.length), 'base64')
+            return safeStorage.decryptString(bytes)
+          }
+          // Backward compatibility: migrate a legacy plaintext sidecar only
+          // after reading its full contents. Atomic replacement cannot truncate
+          // the old file if encryption or disk writes fail.
+          if (safeStorage.isEncryptionAvailable()) this.writeTextPayload(id, stored)
+          return stored
         }
-      } catch { /* ignore */ }
+        console.warn('[ItemStore] Missing full text sidecar for item', id)
+      } catch (err) {
+        console.warn('[ItemStore] Full text sidecar temporarily unreadable:', err)
+      }
     }
     return item.data.text
   }

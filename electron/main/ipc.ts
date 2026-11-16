@@ -59,7 +59,7 @@ let textDragSafetyTimer: ReturnType<typeof setTimeout> | undefined
 function clipboardMatchesItem(item: ClipboardItem, sig: string): boolean {
   const fullText =
     item.data.kind === 'text' && item.data.hasFullPayload
-      ? getStore().getFullText(item.id)
+      ? getStore().getVerifiedFullText(item.id) ?? undefined
       : undefined
   return signatureMatchesItem(sig, item.data, fullText)
 }
@@ -393,7 +393,9 @@ export function registerIpc(): void {
   })
 
   handle('item:get-full-text', (id) => {
-    return getStore().getFullText(id)
+    const fullText = getStore().getVerifiedFullText(id)
+    if (fullText === null) toast('toast.textUnavailable', 'error')
+    return fullText ?? ''
   })
 
   handle('item:copy', async (id) => {
@@ -401,10 +403,15 @@ export function registerIpc(): void {
     console.log('[IPC] item:copy id=', id, 'found=', !!item)
     if (!item) return false
 
+    const fullText = item.data.kind === 'text' ? getStore().getVerifiedFullText(id) : undefined
+    if (fullText === null) {
+      // A missing/locked sidecar must never result in copying a partial preview.
+      toast('toast.textUnavailable', 'error')
+      return false
+    }
     const watcher = getWatcher()
     watcher.setPaused(true)
-    const fullText = item.data.kind === 'text' ? getStore().getFullText(id) : undefined
-    const itemDataWithFullText = item.data.kind === 'text' && fullText ? { ...item.data, text: fullText } : item.data
+    const itemDataWithFullText = item.data.kind === 'text' ? { ...item.data, text: fullText! } : item.data
     const ok = await writeItemToClipboard(itemDataWithFullText, item.capturedAt)
     if (!ok) {
       // Source content (e.g. the staged image file) is unrecoverable. Do not
@@ -496,6 +503,13 @@ export function registerIpc(): void {
     console.log('[IPC] item:paste id=', id, 'found=', !!item)
     if (!item) return false
 
+    const fullText = item.data.kind === 'text' ? getStore().getVerifiedFullText(id) : undefined
+    if (fullText === null) {
+      // Keep the panel and the system clipboard unchanged on decryption failure.
+      toast('toast.textUnavailable', 'error')
+      return false
+    }
+
     // Fast pre-flight BEFORE any UI state changes: if the source content is
     // unrecoverable (e.g. the staged image file vanished), abort with an
     // explicit message while the panel is still open — never close the shelf
@@ -517,8 +531,7 @@ export function registerIpc(): void {
       pushState.togglePanel(false)
 
       // 2. Write item to system clipboard
-      const fullText = item.data.kind === 'text' ? getStore().getFullText(id) : undefined
-      const itemDataWithFullText = item.data.kind === 'text' && fullText ? { ...item.data, text: fullText } : item.data
+      const itemDataWithFullText = item.data.kind === 'text' ? { ...item.data, text: fullText! } : item.data
       const ok = await writeItemToClipboard(itemDataWithFullText, item.capturedAt, { plain: opts?.plain === true })
       if (!ok) {
         // Extremely rare race: source vanished between pre-check and write.

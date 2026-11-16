@@ -27,6 +27,17 @@ vi.mock('electron', () => ({
   }
 }))
 
+vi.mock('../electron/store/winDpapi', () => ({
+  hasDirectDpapi: () => crypto.available,
+  dpapiProtect: (text: string) => Buffer.from(`ENC:${crypto.key}:${text}`, 'utf8'),
+  dpapiUnprotect: (encrypted: Buffer) => {
+    const str = encrypted.toString('utf8')
+    const head = `ENC:${crypto.key}:`
+    if (crypto.decryptFails || !str.startsWith(head)) throw new Error('Synthetic DPAPI key mismatch')
+    return str.slice(head.length)
+  }
+}))
+
 vi.mock('node:os', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:os')>()
   return { ...actual, homedir: () => fsRoots.home }
@@ -194,7 +205,7 @@ describe('saving', () => {
     store.add(text('two'), 250)
     store.persistSync()
     expect(sideFiles()).toEqual([])
-    expect(JSON.parse(bytes().toString('utf8'))).toMatchObject({ v: 2, encrypted: true })
+    expect(JSON.parse(bytes().toString('utf8'))).toMatchObject({ v: 3, encrypted: true, crypto: 'win-dpapi-v1' })
     expect(launch().list()).toHaveLength(2)
   })
 

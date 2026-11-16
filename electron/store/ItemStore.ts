@@ -28,6 +28,7 @@ import { createId } from './ids'
 import { contentSignature } from './signature'
 import { MAX_ITEM_HTML_CHARS } from '../clipboard/formats'
 import { isKept, joinNotes, normalizeNote, noteFromLegacy, type ItemMetaPatch } from '../../shared/itemMeta'
+import { hasDirectDpapi, dpapiProtect, dpapiUnprotect } from './winDpapi'
 import { linkTitleFromHtml } from '../../shared/linkText'
 
 /** Write an already-normalized note, removing the field when empty. */
@@ -85,16 +86,20 @@ function readIndex(raw: Buffer): { index: Index | null; encrypted: boolean; plai
     index && Array.isArray(index.items) ? { items: index.items.filter((it: any) => it && it.data && typeof it.id === 'string') } : null
 
   if (parsedJson && parsedJson.encrypted === true && typeof parsedJson.payload === 'string') {
-    // Encrypted DPAPI Envelope
+    // v3 uses direct user-scoped Windows DPAPI (no Chromium Local State key).
+    // v2 retains the original safeStorage format for existing installations.
     let index: Index | null = null
-    if (safeStorage.isEncryptionAvailable()) {
-      try {
-        index = valid(JSON.parse(safeStorage.decryptString(Buffer.from(parsedJson.payload, 'base64'))))
-      } catch (err) {
-        console.error('[ItemStore] DPAPI decryption failed:', err)
+    try {
+      const payload = Buffer.from(parsedJson.payload, 'base64')
+      if (parsedJson.crypto === 'win-dpapi-v1') {
+        index = valid(JSON.parse(dpapiUnprotect(payload)))
+      } else if (safeStorage.isEncryptionAvailable()) {
+        index = valid(JSON.parse(safeStorage.decryptString(payload)))
+      } else {
+        console.warn('[ItemStore] safeStorage unavailable to decrypt legacy items.json')
       }
-    } else {
-      console.warn('[ItemStore] safeStorage unavailable to decrypt items.json')
+    } catch (err) {
+      console.error('[ItemStore] DPAPI decryption failed; original index is preserved:', err)
     }
     return { index, encrypted: true, plain: false }
   }
@@ -210,8 +215,7 @@ export class ItemStore {
           const linkTitle = linkTitleFromHtml(it.data.html, it.data.text.trim())
           if (linkTitle) it.data.linkTitle = linkTitle
         }
-        if (!it.data.hasFullPayload && it.data.text.length > 300) {
-          this.writeTextPayload(it.id, it.data.text)
+        if (!it.data.hasFullPayload && it.data.text.length > 300 && this.writeTextPayload(it.id, it.data.text)) {
           it.data.hasFullPayload = true
           it.data.previewText = it.data.text.slice(0, 300)
           it.data.text = it.data.previewText
@@ -321,14 +325,45 @@ export class ItemStore {
       const jsonStr = JSON.stringify(indexObj)
       const file = PATHS.indexFile()
 
-      if (safeStorage.isEncryptionAvailable()) {
-        const encryptedBuf = safeStorage.encryptString(jsonStr)
-        const envelope = {
-          v: 2,
-          encrypted: true,
-          payload: encryptedBuf.toString('base64')
+      if (process.platform === 'win32') {
+        // Direct Windows DPAPI is independent of Chromium Local State, which
+        // might not have been flushed before the app's first forced exit.
+        if (!hasDirectDpapi()) {
+          console.error('[ItemStore] Direct Windows DPAPI unavailable; refusing to save an insecure index')
+          return false
         }
-        writeFileAtomic(file, JSON.stringify(envelope))
+        // Keep a verified byte-for-byte index snapshot on the FIRST v2->v3
+        // migration. A full profile backup including Chromium Local State and
+        // sidecars is still required to roll back to a pre-v3 executable.
+        if (existsSync(file)) {
+          const previous = readFileSync(file)
+          let previousEnvelope: { v?: number; encrypted?: boolean } | null = null
+          try {
+            previousEnvelope = JSON.parse(previous.toString('utf8')) as { v?: number; encrypted?: boolean }
+          } catch {
+            // The pre-v3 backup rule applies only to valid v2 envelopes.
+            // Other unreadable histories are already protected by load()/setAsideUnreadable.
+          }
+          const legacyBackup = `${file}.pre-win-dpapi-v2.bak`
+          if (previousEnvelope?.encrypted === true && previousEnvelope.v === 2 && !existsSync(legacyBackup)) {
+            writeFileAtomic(legacyBackup, previous.toString('utf8'))
+            if (!readFileSync(legacyBackup).equals(previous)) throw new Error('Legacy index backup verification failed')
+          }
+        }
+        const encryptedBuf = dpapiProtect(jsonStr)
+        writeFileAtomic(file, JSON.stringify({
+          v: 3, encrypted: true, crypto: 'win-dpapi-v1',
+          payload: encryptedBuf.toString('base64')
+        }))
+        this.indexEncrypted = true
+        return true
+      }
+      if (safeStorage.isEncryptionAvailable()) {
+        // Non-Windows compatibility only.
+        const encryptedBuf = safeStorage.encryptString(jsonStr)
+        writeFileAtomic(file, JSON.stringify({
+          v: 2, encrypted: true, payload: encryptedBuf.toString('base64')
+        }))
         this.indexEncrypted = true
         return true
       } else if (this.indexEncrypted) {
@@ -378,9 +413,8 @@ export class ItemStore {
    * Returns true if the list actually changed (so callers can decide to push).
    */
   add(data: ItemData, limit: number): boolean {
-    if (data.kind === 'text' && data.text.length > 500000) {
-      data = { ...data, text: data.text.slice(0, 500000) }
-    }
+    // Never truncate clipboard text before creating the disk payload.
+    // A user may copy a large document or source file and expect exact recovery.
     const sig = contentSignature(data)
     const existingId = this.sigToId.get(sig)
     const now = Date.now()
@@ -414,8 +448,7 @@ export class ItemStore {
       if (data.html && data.html.length > MAX_ITEM_HTML_CHARS) {
         delete data.html
       }
-      if (data.text.length > 300) {
-        this.writeTextPayload(id, data.text)
+      if (data.text.length > 300 && this.writeTextPayload(id, data.text)) {
         finalData = {
           ...data,
           hasFullPayload: true,
@@ -911,10 +944,39 @@ export class ItemStore {
     return join(PATHS.payloadsDir(), `${id}.txt`)
   }
 
-  private writeTextPayload(id: string, text: string): void {
+  // Existing .txt sidecars were plaintext. New sidecars are DPAPI-encrypted and
+  // self-identifying so old profiles remain readable during gradual migration.
+  private static readonly ENCRYPTED_TEXT_PREFIX = 'PLIUM-DPAPI-TEXT-V1:'
+  private static readonly DIRECT_DPAPI_TEXT_PREFIX = 'PLIUM-WIN-DPAPI-TEXT-V1:'
+
+  /** Only report success after the COMPLETE payload is safely persisted. */
+  private writeTextPayload(id: string, text: string): boolean {
     try {
-      writeFileSync(this.textPayloadPath(id), text, 'utf8')
-    } catch { /* ignore */ }
+      // Do not create new plaintext sidecars if Windows DPAPI is unavailable.
+      // The caller keeps the full text inline instead of committing a preview
+      // that could never be recovered after a failed/unencrypted disk write.
+      if (process.platform === 'win32') {
+        if (!hasDirectDpapi()) return false
+        const ciphertext = dpapiProtect(text)
+        if (dpapiUnprotect(ciphertext) !== text) throw new Error('DPAPI text payload verification failed')
+        writeFileAtomic(
+          this.textPayloadPath(id),
+          ItemStore.DIRECT_DPAPI_TEXT_PREFIX + ciphertext.toString('base64')
+        )
+        return true
+      }
+      if (!safeStorage.isEncryptionAvailable()) return false
+      const ciphertext = safeStorage.encryptString(text)
+      if (safeStorage.decryptString(ciphertext) !== text) throw new Error('Text payload encryption verification failed')
+      writeFileAtomic(
+        this.textPayloadPath(id),
+        ItemStore.ENCRYPTED_TEXT_PREFIX + ciphertext.toString('base64')
+      )
+      return true
+    } catch (err) {
+      console.warn('[ItemStore] Full text sidecar could not be stored; retaining inline text:', err)
+      return false
+    }
   }
 
   private removeTextPayload(id: string): void {
@@ -924,18 +986,46 @@ export class ItemStore {
     } catch { /* ignore */ }
   }
 
+  /**
+   * Return null instead of a misleading 300-character preview when a sidecar
+   * cannot be read. Copy/paste must abort rather than silently lose data.
+   */
+  public getVerifiedFullText(id: string): string | null {
+    const item = this.items.find((x) => x.id === id)
+    if (!item || item.data.kind !== 'text') return null
+    if (!item.data.hasFullPayload) return item.data.text
+    try {
+      const p = this.textPayloadPath(id)
+      if (!existsSync(p)) {
+        console.warn('[ItemStore] Missing full text sidecar for item', id)
+        return null
+      }
+      const stored = readFileSync(p, 'utf8')
+      if (stored.startsWith(ItemStore.DIRECT_DPAPI_TEXT_PREFIX)) {
+        const bytes = Buffer.from(stored.slice(ItemStore.DIRECT_DPAPI_TEXT_PREFIX.length), 'base64')
+        return dpapiUnprotect(bytes)
+      }
+      if (stored.startsWith(ItemStore.ENCRYPTED_TEXT_PREFIX)) {
+        // Do not alter ciphertext when the DPAPI key is unavailable.
+        if (!safeStorage.isEncryptionAvailable()) return null
+        const bytes = Buffer.from(stored.slice(ItemStore.ENCRYPTED_TEXT_PREFIX.length), 'base64')
+        return safeStorage.decryptString(bytes)
+      }
+      // Old plaintext sidecars remain readable. Opportunistic, atomic upgrade
+      // never destroys the original plaintext if encryption/write fails.
+      if (safeStorage.isEncryptionAvailable()) this.writeTextPayload(id, stored)
+      return stored
+    } catch (err) {
+      console.warn('[ItemStore] Full text sidecar temporarily unreadable:', err)
+      return null
+    }
+  }
+
+  /** Legacy call sites may display a preview; use verified method for writes. */
   public getFullText(id: string): string {
     const item = this.items.find((x) => x.id === id)
     if (!item || item.data.kind !== 'text') return ''
-    if (item.data.hasFullPayload) {
-      try {
-        const p = this.textPayloadPath(id)
-        if (existsSync(p)) {
-          return readFileSync(p, 'utf8')
-        }
-      } catch { /* ignore */ }
-    }
-    return item.data.text
+    return this.getVerifiedFullText(id) ?? item.data.text
   }
 
   /* ------------------------------- DTO ----------------------------------- */

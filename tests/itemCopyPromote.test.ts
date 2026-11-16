@@ -15,7 +15,15 @@ vi.mock('electron', () => ({
     getPath: (name: string) => (name === 'userData' ? fsRoots.userData : join(fsRoots.userData, name))
   },
   nativeImage: { createFromPath: () => ({ isEmpty: () => true }) },
-  safeStorage: { isEncryptionAvailable: () => false }
+  safeStorage: {
+    isEncryptionAvailable: () => true,
+    encryptString: (value: string) => Buffer.from('ENC:' + value, 'utf8'),
+    decryptString: (value: Buffer) => {
+      const encoded = value.toString('utf8')
+      if (!encoded.startsWith('ENC:')) throw new Error('Unexpected ciphertext')
+      return encoded.slice(4)
+    }
+  }
 }))
 
 vi.mock('node:os', async (importOriginal) => {

@@ -24,6 +24,17 @@ vi.mock('electron', () => ({
     }
   }
 }))
+vi.mock('../electron/store/winDpapi', () => ({
+  hasDirectDpapi: () => dpapi.available,
+  dpapiProtect: (text: string) => Buffer.from('ENC:' + dpapi.key + ':' + text, 'utf8'),
+  dpapiUnprotect: (encrypted: Buffer) => {
+    const str = encrypted.toString('utf8')
+    const head = 'ENC:' + dpapi.key + ':'
+    if (!str.startsWith(head)) throw new Error('Synthetic DPAPI key mismatch')
+    return str.slice(head.length)
+  }
+}))
+
 vi.mock('node:os', async (original) => {
   const real = await original<typeof import('node:os')>()
   return { ...real, homedir: () => roots.home }
@@ -56,10 +67,11 @@ describe('PLIUM full-text data safety', () => {
     store.add({ kind: 'text', text: bigText, isUrl: false }, 250)
     const item = store.list()[0]
     expect(store.getFullText(item.id)).toBe(bigText)
+    expect(store.getVerifiedFullText(item.id)).toBe(bigText)
     expect(item.data.kind === 'text' && item.data.hasFullPayload).toBe(true)
     const file = join(PATHS.payloadsDir(), item.id + '.txt')
     const raw = readFileSync(file, 'utf8')
-    expect(raw.startsWith('PLIUM-DPAPI-TEXT-V1:')).toBe(true)
+    expect(raw.startsWith('PLIUM-WIN-DPAPI-TEXT-V1:')).toBe(true)
     expect(raw).not.toContain(bigText.slice(0, 100))
     expect(store.persistSync()).toBe(true)
 
@@ -80,7 +92,7 @@ describe('PLIUM full-text data safety', () => {
     const file = join(PATHS.payloadsDir(), id + '.txt')
     writeFileSync(file, tinyLongText, 'utf8') // legacy v10 file
     expect(store.getFullText(id)).toBe(tinyLongText)
-    expect(readFileSync(file, 'utf8')).toMatch(/^PLIUM-DPAPI-TEXT-V1:/)
+    expect(readFileSync(file, 'utf8')).toMatch(/^PLIUM-WIN-DPAPI-TEXT-V1:/)
     store.persistSync()
     const reopened = new ItemStore()
     reopened.load()
@@ -95,11 +107,52 @@ describe('PLIUM full-text data safety', () => {
     const file = join(PATHS.payloadsDir(), id + '.txt')
     const saved = readFileSync(file)
     dpapi.key = 'other'
+    expect(store.getVerifiedFullText(id)).toBeNull()
     expect(store.getFullText(id)).toBe(tinyLongText.slice(0, 300))
     expect(readFileSync(file).equals(saved)).toBe(true)
     dpapi.key = 'k1'
     expect(store.getFullText(id)).toBe(tinyLongText)
     store.persistSync()
+  })
+
+  it('returns null for an absent sidecar instead of pretending preview is full text', () => {
+    const store = new ItemStore()
+    store.add({ kind: 'text', text: tinyLongText, isUrl: false }, 250)
+    const id = store.list()[0].id
+    rmSync(join(PATHS.payloadsDir(), id + '.txt'))
+    expect(store.getVerifiedFullText(id)).toBeNull()
+    expect(store.list()).toHaveLength(1)
+  })
+
+  it('reads a v10 safeStorage index and can rewrite it as durable direct-DPAPI v3', () => {
+    const legacy = { items: [{
+      id: 'legacy-v2', data: { kind: 'text', text: 'legacy text', isUrl: false },
+      capturedAt: Date.now(), hitCount: 1, pinned: false
+    }] }
+    const payload = Buffer.from('ENC:' + dpapi.key + ':' + JSON.stringify(legacy), 'utf8').toString('base64')
+    writeFileSync(PATHS.indexFile(), JSON.stringify({ v: 2, encrypted: true, payload }), 'utf8')
+    const originalIndex = readFileSync(PATHS.indexFile())
+    const store = new ItemStore()
+    store.load()
+    expect(store.getFullText('legacy-v2')).toBe('legacy text')
+    expect(store.persistSync()).toBe(true)
+    expect(readFileSync(PATHS.indexFile() + '.pre-win-dpapi-v2.bak').equals(originalIndex)).toBe(true)
+    expect(JSON.parse(readFileSync(PATHS.indexFile(), 'utf8'))).toMatchObject({
+      v: 3, encrypted: true, crypto: 'win-dpapi-v1'
+    })
+    const reopened = new ItemStore()
+    reopened.load()
+    expect(reopened.getFullText('legacy-v2')).toBe('legacy text')
+  })
+
+  it('reads the former safeStorage-encrypted long-text sidecar', () => {
+    const store = new ItemStore()
+    store.add({ kind: 'text', text: tinyLongText, isUrl: false }, 250)
+    const id = store.list()[0].id
+    const file = join(PATHS.payloadsDir(), id + '.txt')
+    const oldEncrypted = Buffer.from('ENC:' + dpapi.key + ':' + tinyLongText, 'utf8').toString('base64')
+    writeFileSync(file, 'PLIUM-DPAPI-TEXT-V1:' + oldEncrypted, 'utf8')
+    expect(store.getVerifiedFullText(id)).toBe(tinyLongText)
   })
 
   it('never marks a preview-only pointer when encryption is unavailable', () => {

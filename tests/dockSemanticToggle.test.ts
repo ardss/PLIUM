@@ -6,6 +6,7 @@ import { TRANSLATIONS } from '../src/i18n/translations'
 const root = join(__dirname, '..')
 const header = readFileSync(join(root, 'src/components/Header.tsx'), 'utf8')
 const panel = readFileSync(join(root, 'src/components/Panel.tsx'), 'utf8')
+const itemList = readFileSync(join(root, 'src/components/ItemList.tsx'), 'utf8')
 const css = readFileSync(join(root, 'src/styles/panel.css'), 'utf8')
 
 describe('dock expand/collapse semantics', () => {
@@ -28,6 +29,20 @@ describe('dock expand/collapse semantics', () => {
     expect(header).toContain('aria-label={dockActionLabel}')
     expect(panel).toContain('onDockRowsChange={isHorizontal ? commitRows : undefined}')
     expect(panel).toContain('dockFlip.capture()')
+  })
+
+  it('batches FLIP layout reads before starting row-change animations', () => {
+    const start = itemList.indexOf("const cards = Array.from(list.querySelectorAll<HTMLElement>('.list-stack .item'))")
+    const cancel = itemList.indexOf('animation.cancel()', start)
+    const measure = itemList.indexOf('nextRects.set(el, cardVisualPos(el))', start)
+    const animate = itemList.indexOf('el.animate(', measure)
+    expect(start).toBeGreaterThan(-1)
+    expect(cancel).toBeGreaterThan(start)
+    expect(measure).toBeGreaterThan(cancel)
+    expect(animate).toBeGreaterThan(measure)
+    const animationPass = itemList.slice(itemList.indexOf('cards.forEach((el) => {', measure), animate)
+    expect(animationPass).not.toContain('cardVisualPos(el)')
+    expect(animationPass).not.toContain('list.getBoundingClientRect()')
   })
 
   it('uses the same action label for the lower drag handle', () => {

@@ -55,7 +55,7 @@ The unsigned local installer is built under `dist/`. For development use `npm ru
 
 PLIUM uses `PLIUM.exe`, AppID `com.ardss.plium` and a separate profile under `%APPDATA%\plium`. It never uses the upstream's online updater, store listing or installer identity. Historical Edge-Drop clipboard profiles are not silently replaced; migrating from an original installation requires explicit backup and verification.
 
-See [Privacy](PRIVACY.md), [Security reporting](SECURITY.md), [Upstream history](UPSTREAM-HISTORY.md) and [Preview release / migration notes](PLIUM-PREVIEW.md).
+See [Privacy](PRIVACY.md), [Security reporting](SECURITY.md), [Code signing policy](CODE-SIGNING-POLICY.md), [Upstream history](UPSTREAM-HISTORY.md) and [Preview release / migration notes](PLIUM-PREVIEW.md).
 
 ## Feedback and contribution
 

@@ -50,20 +50,20 @@ describe('Fix 4 � Tier-2 fuzzy match uses workArea (not bounds)', () => {
     const r = computeStickBounds({ position: 'left', displays: [PRIMARY, rebooted], displayId: 2, savedWorkArea: { x: 1920, y: 0, width: 1920, height: 1040 }, savedScaleFactor: 1, windowWidth: 384 })
     expect(r.displayId).toBe(99)
   })
-  it('bounds-vs-workArea mismatch (40px taskbar) fails Tier-2 ? falls to primary', () => {
+  it('recover same display despite a 40px taskbar work-area difference', () => {
     const rebooted = makeDisplay(99, 1920, 0, 1920, 1040)
     const r = computeStickBounds({ position: 'left', displays: [PRIMARY, rebooted], displayId: 2, savedWorkArea: { x: 1920, y: 0, width: 1920, height: 1080 }, savedScaleFactor: 1, windowWidth: 384 })
-    expect(r.displayId).toBe(1)
+    expect(r.displayId).toBe(99)
   })
   it('tolerates 7px OS jitter in workArea and still matches', () => {
     const jittered = makeDisplay(99, 1927, 0, 1920, 1040)
     const r = computeStickBounds({ position: 'left', displays: [PRIMARY, jittered], displayId: 2, savedWorkArea: { x: 1920, y: 0, width: 1920, height: 1040 }, savedScaleFactor: 1, windowWidth: 384 })
     expect(r.displayId).toBe(99)
   })
-  it('does NOT match when jitter is 9px (exceeds 8px tolerance)', () => {
+  it('retains the display for a 9px origin jitter using overlap matching', () => {
     const tooFar = makeDisplay(99, 1929, 0, 1920, 1040)
     const r = computeStickBounds({ position: 'left', displays: [PRIMARY, tooFar], displayId: 2, savedWorkArea: { x: 1920, y: 0, width: 1920, height: 1040 }, savedScaleFactor: 1, windowWidth: 384 })
-    expect(r.displayId).toBe(1)
+    expect(r.displayId).toBe(99)
   })
   it('uses scaleFactor tiebreaker when two monitors share identical workArea', () => {
     const hiDpi = makeDisplay(10, 1920, 0, 1920, 1040, { scaleFactor: 1.5 })
@@ -150,3 +150,56 @@ describe('computeStickBounds — top position', () => {
 })
 
 
+
+
+describe('PLIUM Windows A 2026-11-18 dual-monitor incident', () => {
+  it('restores the saved secondary screen when the display id is absent', () => {
+    const monitors = [
+      makeDisplay(1, 0, 0, 1707, 912, { isPrimary: true }),
+      makeDisplay(2, 1707, -227, 2194, 1186, { isPrimary: false })
+    ]
+    const result = computeStickBounds({
+      position: 'top',
+      displays: monitors,
+      displayId: undefined,
+      savedWorkArea: { x: 1707, y: -227, width: 2194, height: 1186 },
+      windowWidth: 384,
+      windowHeight: 210,
+      horizontalOffset: 0.5
+    })
+    expect(result.displayId).toBe(2)
+    expect(result.x).toBe(2234)
+    expect(result.y).toBe(-227)
+    expect(result.width).toBe(1140)
+    expect(result.height).toBe(210)
+  })
+})
+
+describe('PLIUM actual Electron display coordinates after Windows A reboot', () => {
+  it('retains the saved secondary physical monitor across 32px DPI-origin drift', () => {
+    const livePrimary = makeDisplay(3600601832, 0, 0, 1707, 912, { isPrimary: true, scaleFactor: 1.5 })
+    const liveSecondary = makeDisplay(3839195765, 1707, -195, 2196, 1188, { scaleFactor: 1.75 })
+    const result = computeStickBounds({
+      position: 'top',
+      displays: [liveSecondary, livePrimary],
+      savedWorkArea: { x: 1707, y: -227, width: 2194, height: 1186 },
+      windowWidth: 384,
+      windowHeight: 210,
+      horizontalOffset: 0.5
+    })
+    expect(result.displayId).toBe(3839195765)
+    expect(result.x).toBe(2235)
+    expect(result.y).toBe(-195)
+    expect(result.width).toBe(1140)
+  })
+  it('does not mistake a neighboring primary screen for the saved secondary', () => {
+    const primaryOnly = makeDisplay(3600601832, 0, 0, 1707, 912, { isPrimary: true })
+    const result = computeStickBounds({
+      position: 'top',
+      displays: [primaryOnly],
+      savedWorkArea: { x: 1707, y: -227, width: 2194, height: 1186 },
+      windowWidth: 384
+    })
+    expect(result.displayId).toBe(3600601832)
+  })
+})

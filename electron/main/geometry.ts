@@ -59,6 +59,27 @@ function boundsMatch(
   )
 }
 
+/**
+ * Identify the same physical monitor when Windows/Electron report slightly
+ * shifted work-area coordinates (DPI and taskbar reconciliation).
+ * Strong geometric overlap is required; touching screen edges score zero.
+ */
+export function samePhysicalWorkArea(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number }
+): boolean {
+  if (boundsMatch(a, b)) return true
+  if (a.width <= 0 || a.height <= 0 || b.width <= 0 || b.height <= 0) return false
+  const widthRatio = Math.min(a.width, b.width) / Math.max(a.width, b.width)
+  const heightRatio = Math.min(a.height, b.height) / Math.max(a.height, b.height)
+  if (widthRatio < 0.90 || heightRatio < 0.90) return false
+  const intersectionWidth = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x))
+  const intersectionHeight = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y))
+  const intersection = intersectionWidth * intersectionHeight
+  const union = a.width * a.height + b.width * b.height - intersection
+  return union > 0 && intersection / union >= 0.82
+}
+
 export function computeStickBounds(params: StickBoundsParams): StickBoundsResult {
   const { position, displays, displayId, savedWorkArea, savedScaleFactor, windowWidth, currentBounds } = params
 
@@ -69,13 +90,13 @@ export function computeStickBounds(params: StickBoundsParams): StickBoundsResult
     display = displays.find(d => d.id === displayId)
   }
 
-  // ── Tier 2: cross-reboot fuzzy workArea match ──────────────────────────────────
-  // The OS re-assigns numeric display IDs on every Windows boot, so the saved ID
-  // will never match after a restart.  Instead we match on the persisted workArea
-  // geometry (within BOUNDS_TOLERANCE) and optionally the DPI scale factor as a
-  // secondary discriminator when two monitors share the same resolution.
+  // ── Tier 2: saved workArea match across Windows DPI changes ──────────────
+  // Electron can report slightly different screen bounds after Windows login,
+  // even for the SAME physical display. Exact matching alone sent the dock
+  // back to primary on Windows A after a 32px vertical-origin shift.
+  // Prefer exact geometry, then heavily overlapping rectangles.
   if (!display && savedWorkArea) {
-    let candidates = displays.filter(d => boundsMatch(d.workArea, savedWorkArea))
+    let candidates = displays.filter(d => samePhysicalWorkArea(d.workArea, savedWorkArea))
     if (candidates.length > 1 && savedScaleFactor !== undefined) {
       const byScale = candidates.filter(d => d.scaleFactor === savedScaleFactor)
       if (byScale.length) candidates = byScale

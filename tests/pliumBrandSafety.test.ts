@@ -8,20 +8,29 @@ const read = (name: string) => readFileSync(join(root, name), 'utf8')
 const pkg = JSON.parse(read('package.json'))
 
 describe('PLIUM brand/upgrade safety gates', () => {
-  it('uses a unique Windows app identity and NSIS preview target', () => {
+  it('uses a unique Windows app identity and NSIS target', () => {
     expect(pkg.name).toBe('plium')
     expect(pkg.build.appId).toBe('com.ardss.plium')
     expect(pkg.build.productName).toBe('PLIUM')
     expect(pkg.build.win.target.map((t: any) => t.target)).toEqual(['nsis'])
-    expect(pkg.build.publish).toBeUndefined()
     expect(pkg.build.appx).toBeUndefined()
   })
-  it('never checks or downloads an upstream Edge-Drop installer', () => {
+  it('publishes and updates only through the PLIUM release channel', () => {
+    // One publisher entry, and it is ours. An upstream provider here would let
+    // electron-updater install an Edge-Drop package over PLIUM.
+    expect(pkg.build.publish).toHaveLength(1)
+    expect(pkg.build.publish[0]).toMatchObject({ provider: 'github', owner: 'ardss', repo: 'PLIUM' })
+    const channel = read('electron/main/updateChannel.ts')
+    expect(channel).toContain("owner: 'ardss'")
+    expect(channel).toContain("repo: 'PLIUM'")
+    expect(channel).not.toMatch(/github\.com\/Deepender25/i)
+  })
+  it('verifies the packaged feed before enabling updates', () => {
     const updater = read('electron/main/updater.ts')
-    expect(updater).not.toContain('api.github.com')
-    expect(updater).not.toContain('checkForUpdates()')
-    expect(updater).not.toContain('downloadUpdate()')
-    expect(updater).toContain('preview updates are disabled')
+    expect(updater).toContain('isTrustedUpdateChannel')
+    expect(updater).toContain('app-update.yml')
+    // Installing happens while the app is not running, never mid-session.
+    expect(updater).toContain('autoInstallOnAppQuit')
   })
   it('does not reuse Edge-Drop startup Run keys', () => {
     const login = read('electron/main/loginItems.ts')

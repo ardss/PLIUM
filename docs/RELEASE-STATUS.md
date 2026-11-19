@@ -1,14 +1,43 @@
-# PLIUM（叠间）v1.0.0 发行验收状态
+# PLIUM（叠间）发行验收状态
 
 更新日期：2026-11-19。**本文件的 PASS 只代表对应证据与代码快照，不自动推断更新后也通过。** 所有用户历史资料、备份和剪贴板内容不得上传公共仓库。
 
 ## 决策与范围
 
-- 首个自主版本为 `v1.0.0`，产品名 PLIUM / 叠间，AppID `com.ardss.plium`，用户目录 `%APPDATA%\plium`。继承上游 Apache-2.0 许可与署名，但不同步其版本或在线更新渠道。
+- 首个自主版本为 `v1.0.0`，当前版本 `v1.0.1`。产品名 PLIUM / 叠间，AppID `com.ardss.plium`，用户目录 `%APPDATA%\plium`。继承上游 Apache-2.0 许可与署名，但不同步其版本或在线更新渠道。
 - 用户于 2026-11-18 明确决定：**不等待公开代码签名**。允许未签名 Windows 安装包作为公开发行物；但必须在 README、GitHub Release 和安装说明中清楚提示：发行商可能显示“未知”、SmartScreen 可能拦截，用户应核对官方 GitHub 仓库和 SHA-256。**不宣称 Windows 或微软对该软件认证。**
-- 只保持一个正式安装；不为每次修复重复发包；未经完整验收不得创建稳定 Tag 或发布 Release。在线自动更新仍关闭，用户自行控制安装与升级。
+- 只保持一个正式安装；不为每次修复重复发包；未经完整验收不得创建稳定 Tag 或发布 Release。
+- 从 `v1.0.1` 起**在线更新启用**，但仅限 PLIUM 自有通道（`github ardss/PLIUM`，启动时校验 `app-update.yml`），且安装在应用不运行时（退出或用户点“重启安装”）执行。不检测桌面空闲，不自动重启。用户可在设置中选择自动 / 仅通知 / 关闭。
 
-## 2026-11-19 Windows A 实装与验收记录
+## 2026-11-19 v1.0.1 更新机制与合规记录
+
+| 项目 | 值 |
+|---|---|
+| 源码构建提交 | `030fdb8`（此后 `ca48d04` 仅改 `scripts/release/install-local.ps1`，不参与打包） |
+| 安装包 | `PLIUM-Setup-1.0.1.exe`，136,190,922 字节 |
+| 安装包 SHA-256 | `AAA2F11E5EE0714CB2815FD9E2DB3C6729657F012A46649F1B663C6ED1190E4B` |
+| 解包主程序 SHA-256 | `2DEE5BA351FE1E884FC238871CA96CBE7B41CD2408A8BB231758DBCC43EE36BC` |
+| 更新元数据 | `latest.yml` version `1.0.1`，sha512 与安装包一致 |
+| 打包内更新通道 | `app-update.yml` = `github` `ardss` `PLIUM` |
+| 自动化 | 94 文件 / 986 测试通过；生产依赖审计 0；运行时许可证审计 25 包通过（2 个 MPL-2.0 已披露） |
+
+Windows A（`DESKTOP-CD2C03F`）`1.0.0` → `1.0.1` 实装，使用 `scripts/release/install-local.ps1`：
+
+| 门禁 | 结果 | 证据 |
+|---|---|---|
+| 安装包 SHA-256 校验 | **PASS** | `AAA2F11E…` 命中期望值 |
+| 静默安装 | **PASS** | NSIS `/S` 退出码 0，版本 `1.0.0` → `1.0.1` |
+| 装前资料快照 | **PASS** | `C:\Users\13397\AppData\Local\PLIUM\upgrades\20261119-155601` |
+| 历史逐字节保全 | **PASS** | `items.json` SHA `5E39A16C…` 装前与装后完全一致 |
+| 关联文件保全 | **PASS** | `payloads` 56 / `images` 60 |
+| 单主实例 | **PASS（手动复跑）** | 脚本内首启因执行环境注入 `ELECTRON_RUN_AS_NODE=1` 被当作纯 Node 而失败；清变量后由 explorer 启动：1 main + gpu + renderer，无重复。已修复脚本，见 `ca48d04` |
+| 更新通道 | **PASS** | 安装目录内 `resources/app-update.yml` = `github ardss/PLIUM` |
+
+**说明：** 脚本首次运行报 `bad option: --hidden`，根因是执行环境注入了 `ELECTRON_RUN_AS_NODE=1`，不是产品缺陷；安装、备份与数据校验三步均已通过。该变量不可能出现在普通用户环境中，但脚本已在启动前主动清除，避免在 Electron 开发终端里复现。
+
+**尚未验证（不作为已通过）：** 真实的“下载新版本 → 退出安装”端到端升级（需要等到 `v1.0.2` 存在时才能自然发生）；1.0.0 用户不会收到更新提示。
+
+## 2026-11-19 Windows A v1.0.0 实装与验收记录
 
 构建产物（Windows B 构建，Windows A 实装，两端哈希一致）：
 
@@ -56,7 +85,7 @@ Windows A 执行结果（`DESKTOP-CD2C03F`，Session 1，双显示器）：
 
 | 门禁 | 结果 | 具体证据 |
 |---|---|---|
-| Windows B 自动化 | **PASS（当前提交）** | 本地 TypeScript、93 文件 / 967 个 Vitest 测试与 Electron-Vite 构建，全退出码 0；`eed31d1` 的 GitHub CI `44438535764` success。 |
+| Windows B 自动化 | **PASS（当前提交）** | 本地 TypeScript、93 文件 / 967 个 Vitest 测试与 Electron-Vite 构建，全退出码 0（`v1.0.0`）；`v1.0.1` 为 94 文件 / 986 测试。`eed31d1` 的 GitHub CI `44438535764` success。 |
 | Windows B 隔离 IPC | **PASS** | 10/10 合成数据测试：文字/图片/文件导入、一行⇄三行高度 210⇄522px、置顶保留、清理与删除；记录 `K:\AIControl\CV-Delivery-20261107\plium-isolated-native-qa\cdp-synthetic-e2e-result.json`。 |
 | Windows B 真实触顶 | **PASS（会话连接时）** | 真鼠标触顶部居中区后 DOM `is-open=true`，鼠标移开复原 `is-open=false`。 |
 | Windows B 真实 Alt+C | **PASS（会话连接时）** | Windows 键盘事件两次呼出/关闭；DOM 状态逐次验证。 |
@@ -74,6 +103,6 @@ P0（已完成）：最终源码提交与 CI/依赖审计；冻结版号和安�
 
 P0（结转下一期，不阻断首版）：Windows A 真实拖出到外部应用、清除确认交互、真实回滚演练、真实注销重启后的自启。
 
-P1：公开后的 OCR、智能搜索、分组拖拽、自动更新通道（建议采用“下次启动生效”模型，而不是桌面空闲探测）、代码签名。
+P1：公开后的 OCR、智能搜索、分组拖拽、代码签名。~~自动更新通道~~ 已于 `v1.0.1` 交付（自有通道 + 退出时安装）。
 
 **GO 规则：** 相同源码与二进制的关键验收通过、发布文档一致后允许以“未签名公开版”发版；签名本身不阻断。未满足的核心交互或数据安全门禁仍不得直接标记稳定已验收。参见 [发行制度](RELEASE-POLICY.md) 与 [Issue #18](https://github.com/ardss/PLIUM/issues/18)。

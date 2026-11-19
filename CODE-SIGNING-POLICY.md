@@ -23,7 +23,7 @@ PLIUM is an independently maintained open-source Windows clipboard shelf, derive
 
 ## Privacy and user control
 
-PLIUM handles potentially sensitive clipboard text, URLs, images, and file metadata locally. The core functionality does not upload clipboard history to an owned cloud service. Users should not copy sensitive information into bug reports or distribute their clipboard profile. Refer to [Privacy policy](PRIVACY.md) for storage, local staging, external URL behavior, and data deletion. PLIUM updates are currently disabled; applications are not silently changed or upgraded. Installation and removal are controlled by Windows' Apps/Installed Apps interface using the PLIUM installer/uninstaller. The application must notify users about relevant system settings, including login auto-start.
+PLIUM handles potentially sensitive clipboard text, URLs, images, and file metadata locally. The core functionality does not upload clipboard history to an owned cloud service. Users should not copy sensitive information into bug reports or distribute their clipboard profile. Refer to [Privacy policy](PRIVACY.md) for storage, local staging, external URL behavior, and data deletion. PLIUM updates follow the user's own setting: automatic (downloaded in the background, installed when PLIUM exits), notify-only, or off. An update never restarts the application on its own, and the update channel is restricted to the PLIUM repository — a packaged build whose feed points elsewhere disables updating. Installation and removal are controlled by Windows' Apps/Installed Apps interface using the PLIUM installer/uninstaller. The application must notify users about relevant system settings, including login auto-start.
 
 ## Free open-source signing evaluation
 

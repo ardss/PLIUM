@@ -4,7 +4,8 @@ PLIUM is an independent Windows clipboard shelf forked from [Edge-Drop](https://
 
 ## Release and migration policy
 
-- Current verified Windows A local preview: `0.4.0-plium.10`. No public signed build, official auto-update channel or Microsoft Store/MSIX package is offered.
+- Current released build: `1.0.1` (see [Releases](https://github.com/ardss/PLIUM/releases)). No Microsoft Store/MSIX package is offered, and the installer is unsigned by maintainer decision.
+- Updates are served only from this repository. PLIUM downloads in the background and installs when it exits, or when you choose "restart to install"; users can also select notify-only or fully offline. See [Privacy](PRIVACY.md) for the exact network behaviour.
 - Preserve original Edge-Drop program/data and a previous PLIUM installer as rollback assets. Never run two clipboard watchers concurrently.
 - Do not install upstream Edge-Drop packages as PLIUM upgrades; use only independently built and checksum-verified PLIUM NSIS installers.
 - The original encrypted clipboard index, Chromium `Local State` and image payloads are private, and must never appear in Git, debug logs or issues.
@@ -19,7 +20,7 @@ PLIUM is an independent Windows clipboard shelf forked from [Edge-Drop](https://
 
 ## Known release gates
 
-Windows B source/unit and isolated desktop GUI tests have passed. Windows A received `0.4.0-plium.10`, with installer hash, backup, history preservation, running instance and autostart checked. Public signing, full real dual-monitor QA and reboot/cold-start release checks remain outstanding.
+Windows B source/unit and isolated desktop GUI tests pass, and Windows A received both `1.0.0` and `1.0.1` with installer hash, backup, history preservation, running instance and autostart checked. Still outstanding on the real device: drag-out into third-party apps, the clear-confirmation flow, a rollback drill, and cold start after logon. Code signing remains an accepted, disclosed gap rather than a gate.
 
 ## Upstream
 

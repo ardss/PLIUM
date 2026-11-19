@@ -52,10 +52,14 @@ describe('PLIUM public-repository identity and safety', () => {
     expect(existsSync(join(root, '.github/FUNDING.yml'))).toBe(false)
     expect(read('resources/plium-logo.svg')).toContain('<title id="logo-title">PLIUM')
   })
-  it('keeps the license and a paused, separate release channel', () => {
+  it('keeps the license and a separate, PLIUM-owned release channel', () => {
     expect(existsSync(join(root, 'LICENSE'))).toBe(true)
     expect(read('PLIUM-PREVIEW.md')).toContain('one row ↔ three rows')
-    expect(read('PRIVACY.md')).toContain('Online update checking is **disabled**')
+    // Privacy must describe the real update traffic: our own feed, no telemetry.
+    const privacy = read('PRIVACY.md')
+    expect(privacy).toContain('api.github.com/repos/ardss/PLIUM/releases/latest')
+    expect(privacy).toContain('does not watch your keyboard or mouse')
+    expect(privacy).not.toMatch(/Deepender25\/Edge-Drop\/releases/)
     const workflow = read('.github/workflows/quality.yml')
     expect(workflow).toContain('pull_request:')
     expect(workflow).toContain('npm run typecheck')

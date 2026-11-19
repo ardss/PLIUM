@@ -14,4 +14,10 @@ For a PLIUM update, never install an older Edge-Drop package over PLIUM. The app
 
 The original version tags' SHA mapping was verified before the old unprefixed tag references were retired. Git lineage remains available; unprefixed Edge-Drop version-tag links may no longer resolve on this fork. For those original releases, consult the [upstream project's releases](https://github.com/Deepender25/Edge-Drop/releases) instead.
 
-PLIUM's official public binaries are not yet released or signed. Local NSIS builds are for controlled testing until the signing and on-device verification gates pass.
+## Update channel independence
+
+PLIUM publishes to its own GitHub release channel (`ardss/PLIUM`) and its updater verifies that channel at startup: a packaged build whose `app-update.yml` points anywhere else disables updating instead of trusting it. Upstream Edge-Drop releases are never used as PLIUM updates, and no upstream signing identity or publisher is inherited.
+
+## Release status
+
+PLIUM `v1.0.0` was published on 2026-11-19 as an unsigned Windows NSIS installer. Each release lists the installer SHA-256; the installer remains unsigned until a signing identity is available, so verify the published hash rather than relying on Authenticode.

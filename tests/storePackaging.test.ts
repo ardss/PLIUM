@@ -21,7 +21,6 @@ describe('PLIUM shipping contracts', () => {
   it('distributes NSIS x64 only and does not impersonate upstream Store', () => {
     expect(pkg.build.win.target).toEqual([{ target: 'nsis', arch: ['x64'] }])
     expect(pkg.build.appx).toBeUndefined()
-    expect(pkg.build.publish).toBeUndefined()
   })
   it('does not offer fake Microsoft Store / MSIX distribution', () => {
     for (const script of ['build:store','build:msix']) {
@@ -37,13 +36,15 @@ describe('PLIUM shipping contracts', () => {
     expect(pkg.build.nsis.perMachine).toBe(false)
     expect(pkg.build.nsis.allowToChangeInstallationDirectory).toBe(true)
   })
-  it('does not inherit an upstream update publisher or update URL', () => {
-    expect(pkg.build.publish).toBeUndefined()
+  it('points updates at the PLIUM publisher, never an upstream one', () => {
+    expect(pkg.build.publish).toEqual([
+      { provider: 'github', owner: 'ardss', repo: 'PLIUM', releaseType: 'release' }
+    ])
     const updater = read('electron/main/updater.ts')
-    expect(updater).not.toContain('api.github.com')
-    expect(updater).not.toContain('checkForUpdates()')
-    expect(updater).not.toContain('downloadUpdate(')
-    expect(updater).toContain('preview updates are disabled')
+    // Updating is enabled, but only against the verified channel.
+    expect(updater).toContain('isTrustedUpdateChannel')
+    expect(updater).not.toMatch(/github\.com\/Deepender25/i)
+    expect(updater).not.toMatch(/api\.github\.com\/repos\/Deepender25/i)
   })
   it('uses independently branded application and tray icons', () => {
     expect(pkg.build.win.icon).toBe('resources/icon.ico')
@@ -65,7 +66,7 @@ describe('PLIUM shipping contracts', () => {
   })
   it('keeps only required runtime packages in production', () => {
     expect(Object.keys(pkg.dependencies).sort()).toEqual([
-      '@resvg/resvg-js', 'koffi', 'react', 'zustand'
+      '@resvg/resvg-js', 'electron-updater', 'koffi', 'react', 'zustand'
     ])
   })
   it('excludes build-only libraries and source packages from production', () => {

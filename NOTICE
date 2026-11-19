@@ -1,0 +1,30 @@
+PLIUM / 叠间
+Copyright 2026 PLIUM contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+------------------------------------------------------------------------
+Derived work
+
+PLIUM is an independent Windows fork of Edge-Drop
+(https://github.com/Deepender25/Edge-Drop), which is distributed under the
+Apache License, Version 2.0.
+
+Copyright in the original Edge-Drop source remains with its authors. Upstream
+commits are retained in this repository's Git history. PLIUM's product name,
+application identity (com.ardss.plium), installation directory, user profile,
+update channel and release artifacts are independent of the upstream project
+and must not be interchanged with it.
+
+------------------------------------------------------------------------
+Third-party artwork
+
+Twemoji graphics © Twitter, Inc. and other contributors.
+Licensed under CC BY 4.0. https://github.com/twitter/twemoji
+
+------------------------------------------------------------------------
+Third-party software
+
+PLIUM bundles third-party npm packages. Their licenses are enumerated by
+`node scripts/audit-licenses.mjs`, which runs in CI and fails the build when a
+runtime dependency reports a license outside the reviewed allowlist.

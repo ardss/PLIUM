@@ -1,6 +1,6 @@
 # PLIUM（叠间）v1.0.1 — 发行说明
 
-> 发行状态：**待发布**（产物已构建并校验，等待合并与 Release）。下载与校验信息见 [Releases](https://github.com/ardss/PLIUM/releases)。
+> 发行状态：**已发布**。下载与校验信息见 [Releases](https://github.com/ardss/PLIUM/releases/tag/v1.0.1)。
 
 ## 这个版本解决什么
 

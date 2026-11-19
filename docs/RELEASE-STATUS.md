@@ -32,6 +32,11 @@ Windows A（`DESKTOP-CD2C03F`）`1.0.0` → `1.0.1` 实装，使用 `scripts/rel
 | 关联文件保全 | **PASS** | `payloads` 56 / `images` 60 |
 | 单主实例 | **PASS（手动复跑）** | 脚本内首启因执行环境注入 `ELECTRON_RUN_AS_NODE=1` 被当作纯 Node 而失败；清变量后由 explorer 启动：1 main + gpu + renderer，无重复。已修复脚本，见 `ca48d04` |
 | 更新通道 | **PASS** | 安装目录内 `resources/app-update.yml` = `github ardss/PLIUM` |
+| 打包完整性 | **PASS** | `app.asar` 含 532 个文件，其中 `electron-updater` 及其依赖 102 个；`out/main/index.js` 含编译后的更新逻辑 |
+| 发布元数据一致性 | **PASS** | `node scripts/release/verify-release.mjs --dist dist-release --tag v1.0.1` 退出码 0；GitHub 侧 `latest.yml` 的 sha512 与本地安装包一致 |
+| 界面功能 | **PASS** | 触顶展开显示卡片与搜索框（226 条）、清除按钮与设置入口；设置面板「行为」页可打开，分组含语言/登录启动/无痕/快捷键/剪贴板规则/历史容量/自动删除/更新 |
+
+**关于更新模式的说明：** 本机 `settings.json` 中 `updateMode = off`（用户此前选择），因此 `v1.0.1` 不会发起任何更新请求——这是 `off` 档的承诺，不是故障。需要自动更新时在「设置 → 行为 → 更新」中改为「自动」或「通知」。
 
 **说明：** 脚本首次运行报 `bad option: --hidden`，根因是执行环境注入了 `ELECTRON_RUN_AS_NODE=1`，不是产品缺陷；安装、备份与数据校验三步均已通过。该变量不可能出现在普通用户环境中，但脚本已在启动前主动清除，避免在 Electron 开发终端里复现。
 

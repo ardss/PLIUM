@@ -40,7 +40,7 @@ jobs:
           $changed = @(git diff --name-only 'HEAD^1' 'HEAD')
           if ($LASTEXITCODE -ne 0) { throw 'Cannot determine changed files' }
           $runtime = @($changed | Where-Object {
-            $_ -notmatch '^(README\.md$|docs/|\.github/|tests/|PLIUM-PREVIEW\.md$|SECURITY\.md$|UPSTREAM-HISTORY\.md$|PRIVACY\.md$|CODE_OF_CONDUCT\.md$)'
+            $_ -notmatch '^(README\.md$|docs/|\.github/|tests/|PLIUM-PREVIEW\.md$|SECURITY\.md$|UPSTREAM-HISTORY\.md$|PRIVACY\.md$|CODE_OF_CONDUCT\.md$|CODE-SIGNING-POLICY\.md$|NOTICE$|THIRD-PARTY-NOTICES\.md$)'
           })
           $force = '${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.package }}' -eq 'true'
           $required = if ($force -or $runtime.Count -gt 0) { 'true' } else { 'false' }
@@ -65,6 +65,10 @@ jobs:
         run: npx vitest run --maxWorkers=2 --reporter=dot
       - name: Dependency security (production gate and reviewed build tooling)
         run: node scripts/audit-dependencies.mjs
+      - name: Runtime license compliance
+        run: node scripts/audit-licenses.mjs
+      - name: Update channel is PLIUM-owned and packaged correctly
+        run: npx vitest run tests/updateChannel.test.ts tests/storeUpdater.test.ts tests/pliumUpdateUI.test.ts --reporter=dot
       - name: Build unsigned Windows installer (CI validation only)
         if: steps.impact.outputs.package == 'true'
         env:

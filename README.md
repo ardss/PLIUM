@@ -38,7 +38,7 @@ Verified before publishing: 93 test files / 967 tests, 967-case Vitest suite, El
 
 **Still not re-verified on Windows A:** real drag-out into third-party apps (text/image/file), the clear-confirmation flow, an actual rollback drill, and cold-start-after-logon. These paths are covered by automation and isolated-environment tests but are not claimed as real-device accepted. See [release gates](docs/RELEASE-STATUS.md) for the exact split.
 
-**Online auto-update remains off.** Check the releases page and install manually.
+**Automatic updates work from `v1.0.1`.** PLIUM checks this repository's release feed, downloads in the background, and installs **when it exits** — or immediately when you click "restart to install". It never waits for an idle desktop and never restarts itself. Settings → Updates offers Automatic / Notify me / Off; Off makes no network requests at all. The feed is restricted to this repository, and a build whose feed points anywhere else disables updating. `v1.0.0` shipped before the updater existed, so upgrade to `v1.0.1` once by hand; after that, updates arrive on their own.
 
 **Unsigned installer warning:** This release is not code-signed, by maintainer decision. Windows may show an **Unknown Publisher** or Microsoft Defender **SmartScreen** warning. Obtain releases only from the [official GitHub repository](https://github.com/ardss/PLIUM/releases), compare the published SHA-256, and decide whether to install. This project does not claim Microsoft certification. Do not disable security protections to install.
 

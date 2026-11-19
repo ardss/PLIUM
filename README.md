@@ -32,9 +32,9 @@ PLIUM runs on Windows 10/11 x64. Not every third-party app accepts every drop fo
 
 ## Preview status and downloads
 
-**The first independent PLIUM `v1.0.0` Windows release is published:** [PLIUM Releases](https://github.com/ardss/PLIUM/releases/tag/v1.0.0) · [release notes](docs/RELEASE-NOTES-v1.0.0.md).
+**Latest: `v1.0.1`** — [PLIUM Releases](https://github.com/ardss/PLIUM/releases) · [v1.0.1 release notes](docs/RELEASE-NOTES-v1.0.1.md). It adds the owned update channel, the license/NOTICE compliance set and the in-repo release tooling. The first release `v1.0.0` remains available.
 
-Verified before publishing: 93 test files / 967 tests, 967-case Vitest suite, Electron-Vite build, production dependency audit (0 vulnerabilities), Gitleaks over 339 commits, and a real upgrade on the maintainer's dual-monitor Windows A machine — installer and executable hashes match, single main instance, `items.json` byte-identical across the upgrade (`payloads` 55 / `images` 60 preserved), unique autostart entry, correct multi-monitor top-edge trigger, and tray left/right/double-click plus `Alt+C` all matching the hover-expanded panel pixel-for-pixel.
+Verified before publishing `v1.0.1`: 94 test files / 986 tests, TypeScript, Electron-Vite build, production dependency audit (0 vulnerabilities), runtime license audit, a `verify-release` check that installer / `latest.yml` / `app-update.yml` agree, and a real `1.0.0 → 1.0.1` upgrade on the maintainer's dual-monitor Windows A machine — installer hash matched, single main instance, and `items.json` byte-identical across the upgrade with `payloads` 56 / `images` 60 preserved.
 
 **Still not re-verified on Windows A:** real drag-out into third-party apps (text/image/file), the clear-confirmation flow, an actual rollback drill, and cold-start-after-logon. These paths are covered by automation and isolated-environment tests but are not claimed as real-device accepted. See [release gates](docs/RELEASE-STATUS.md) for the exact split.
 

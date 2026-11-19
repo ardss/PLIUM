@@ -32,11 +32,17 @@ PLIUM runs on Windows 10/11 x64. Not every third-party app accepts every drop fo
 
 ## Preview status and downloads
 
-**Preparing the first independent PLIUM `v1.0.0` Windows release.** The previous `1.0.0-beta.3` internal build remains installed on Windows A until the final candidate is independently verified. Windows B has passed 93 test files / 967 tests, a native edge-hover/retract test, global Alt+C, tray click/right-click, and ten synthetic Electron integration checks; Windows A final-version upgrade, real external drag-out, tray double-click and cold-login tests are still outstanding. **No public installer or online auto-updater is available yet.**
+**The first independent PLIUM `v1.0.0` Windows release is published:** [PLIUM Releases](https://github.com/ardss/PLIUM/releases/tag/v1.0.0) · [release notes](docs/RELEASE-NOTES-v1.0.0.md).
 
-**Unsigned installer warning:** The initial release will not be code-signed, by maintainer decision. Windows may show an **Unknown Publisher** or Microsoft Defender **SmartScreen** warning. Obtain releases only from the [official GitHub repository](https://github.com/ardss/PLIUM/releases), compare the published SHA-256, and decide whether to install. This project does not claim Microsoft certification. Do not disable security protections to install.
+Verified before publishing: 93 test files / 967 tests, 967-case Vitest suite, Electron-Vite build, production dependency audit (0 vulnerabilities), Gitleaks over 339 commits, and a real upgrade on the maintainer's dual-monitor Windows A machine — installer and executable hashes match, single main instance, `items.json` byte-identical across the upgrade (`payloads` 55 / `images` 60 preserved), unique autostart entry, correct multi-monitor top-edge trigger, and tray left/right/double-click plus `Alt+C` all matching the hover-expanded panel pixel-for-pixel.
 
-See the [current release gates and risk register](docs/RELEASE-STATUS.md). Once verified, PLIUM releases will appear on [PLIUM Releases](https://github.com/ardss/PLIUM/releases). **Do not use upstream Edge-Drop installers to update PLIUM.**
+**Still not re-verified on Windows A:** real drag-out into third-party apps (text/image/file), the clear-confirmation flow, an actual rollback drill, and cold-start-after-logon. These paths are covered by automation and isolated-environment tests but are not claimed as real-device accepted. See [release gates](docs/RELEASE-STATUS.md) for the exact split.
+
+**Online auto-update remains off.** Check the releases page and install manually.
+
+**Unsigned installer warning:** This release is not code-signed, by maintainer decision. Windows may show an **Unknown Publisher** or Microsoft Defender **SmartScreen** warning. Obtain releases only from the [official GitHub repository](https://github.com/ardss/PLIUM/releases), compare the published SHA-256, and decide whether to install. This project does not claim Microsoft certification. Do not disable security protections to install.
+
+See the [current release gates and risk register](docs/RELEASE-STATUS.md). **Do not use upstream Edge-Drop installers to update PLIUM.**
 
 ## Build from source
 

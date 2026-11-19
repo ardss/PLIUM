@@ -166,6 +166,13 @@ try {
 
   # ── 6. Restart and confirm a single main instance ──────────────────────────
   if (-not $NoRestart) {
+    # A leftover ELECTRON_RUN_AS_NODE (common when the script is run from an
+    # Electron development shell) makes PLIUM.exe behave as plain Node and
+    # reject --hidden. Start from a clean environment so the restart is honest.
+    if ($env:ELECTRON_RUN_AS_NODE) {
+      Write-Warning 'ELECTRON_RUN_AS_NODE was set; clearing it before restart'
+      Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+    }
     Write-Step 'Starting PLIUM hidden'
     Start-Process -FilePath $installedExe -ArgumentList '--hidden'
     Start-Sleep -Seconds 12

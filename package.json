@@ -1,6 +1,6 @@
 {
   "name": "plium",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0",
   "description": "PLIUM / 叠间 - an edge clipboard shelf for Windows",
   "author": "PLIUM contributors",
   "license": "Apache-2.0",

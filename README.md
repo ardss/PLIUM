@@ -32,7 +32,9 @@ PLIUM runs on Windows 10/11 x64. Not every third-party app accepts every drop fo
 
 ## Preview status and downloads
 
-Current internal Windows QA candidate: **`1.0.0-beta.3`** (November 18, 2026). This is our own PLIUM version line, not an upstream Edge-Drop release. The candidate has been installed on Windows A with a preserved profile backup and verified source/installer identity; Windows B typecheck and the 93-file / 966-test suite pass. **It is not a signed, fully verified, or publicly released installer.** Real-device hover, startup, drag/drop, and release security checks remain open. **There is no official public PLIUM installer or online updater yet.**
+**Preparing the first independent PLIUM `v1.0.0` Windows release.** The previous `1.0.0-beta.3` internal build remains installed on Windows A until the final candidate is independently verified. Windows B has passed 93 test files / 967 tests, a native edge-hover/retract test, global Alt+C, tray click/right-click, and ten synthetic Electron integration checks; Windows A final-version upgrade, real external drag-out, tray double-click and cold-login tests are still outstanding. **No public installer or online auto-updater is available yet.**
+
+**Unsigned installer warning:** The initial release will not be code-signed, by maintainer decision. Windows may show an **Unknown Publisher** or Microsoft Defender **SmartScreen** warning. Obtain releases only from the [official GitHub repository](https://github.com/ardss/PLIUM/releases), compare the published SHA-256, and decide whether to install. This project does not claim Microsoft certification. Do not disable security protections to install.
 
 See the [current release gates and risk register](docs/RELEASE-STATUS.md). Once verified, PLIUM releases will appear on [PLIUM Releases](https://github.com/ardss/PLIUM/releases). **Do not use upstream Edge-Drop installers to update PLIUM.**
 

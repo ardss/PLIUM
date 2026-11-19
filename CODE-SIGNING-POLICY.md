@@ -1,6 +1,6 @@
 # Code signing policy — PLIUM / 叠间
 
-Status: **unsigned; application for a trusted signing service is not yet approved**.
+Status: **unsigned; signing is optional for the initial v1.0.0 public release by maintainer decision (2026-11-18)**. Download and SmartScreen warnings are mandatory.
 Last reviewed: 2026-11-18.
 
 PLIUM is an independently maintained open-source Windows clipboard shelf, derived from Edge-Drop (Apache-2.0). The source of truth is https://github.com/ardss/PLIUM, and the application identity is `com.ardss.plium`.
@@ -17,9 +17,9 @@ PLIUM is an independently maintained open-source Windows clipboard shelf, derive
 1. Release source must be a reviewed, immutable Git commit in the independent PLIUM repository, not upstream binaries.
 2. CI tests and audits must pass for that **exact** source SHA; all unresolved security findings are disclosed, not hidden.
 3. Windows A and clean-machine interactive acceptance tests must pass on the same release-candidate binary and maintain user clipboard data safety.
-4. The verified build pipeline (preferably a trusted GitHub Actions workflow) must produce hash-recorded artifacts directly from the immutable source. All binaries and installer files to be publicly trusted are signed using an authorized service; signed artifacts may not be changed afterward.
-5. The signing approver must review the source SHA, release notes, privacy information, known risks, signer certificate identity, and installer SHA-256 **for every release**. A self-signed certificate is never called a publicly trusted signature.
-6. Publish the signed artifact together with its commit, version, hash, installation and uninstall guidance, and known limitations. Never include real clipboard data or users' backups in CI artifacts.
+4. The verified build pipeline must produce hash-recorded artifacts directly from an immutable source SHA. For the initial unsigned release, prominently disclose the absent publisher signature. **If an artifact is ever described as signed/trusted**, the trusted signing service must verify and sign that exact SHA; signed artifacts may not be changed afterward.
+5. The repository maintainer must review the source SHA, release notes, privacy information, known risks and installer SHA-256 **for every release**. When signing is enabled, verify signer certificate identity as an additional requirement. A self-signed certificate is never called a publicly trusted signature.
+6. Publish the artifact with its commit, version, hash, installation and uninstall guidance, known limitations, and its honest signing status. Never include real clipboard data or users' backups in CI artifacts.
 
 ## Privacy and user control
 
@@ -31,4 +31,4 @@ The project is evaluating [SignPath Foundation](https://signpath.org/) and its [
 
 > Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org/).
 
-If the Foundation is not available or not approved, a legitimate trusted CA/cloud signing service may be used instead, with the same artifact/source verification obligations. Public `v1.0.0` remains blocked until the release gate is independently satisfied.
+If the Foundation is not available or not approved, a legitimate trusted CA/cloud signing service may be used later, with the same artifact/source verification obligations. **Unsigned `v1.0.0` is permitted** with an explicit warning in the GitHub Release and README; signing itself is not a blocker. Core functionality, data safety and release provenance remain mandatory gates.

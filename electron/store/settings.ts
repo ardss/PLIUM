@@ -69,7 +69,10 @@ export function loadSettings(): Settings {
   let file: Partial<Settings> = {}
   try {
     if (existsSync(PATHS.settingsFile())) {
-      file = JSON.parse(readFileSync(PATHS.settingsFile(), 'utf8')) as Partial<Settings>
+      // Windows PowerShell 5.1 / Notepad may write UTF-8 with a BOM. JSON.parse
+      // rejects U+FEFF; silently reverting to defaults can re-enable startup
+      // or clipboard capture against the user's saved preference.
+      file = JSON.parse(readFileSync(PATHS.settingsFile(), 'utf8').replace(/^\uFEFF/, '')) as Partial<Settings>
     }
   } catch {
     file = {}

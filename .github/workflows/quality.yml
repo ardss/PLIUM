@@ -63,8 +63,8 @@ jobs:
         run: npm run typecheck
       - name: Unit and integration tests
         run: npx vitest run --maxWorkers=2 --reporter=dot
-      - name: Dependency security (runtime and build tooling)
-        run: npm audit --registry=https://registry.npmjs.org --audit-level=moderate
+      - name: Dependency security (production gate and reviewed build tooling)
+        run: node scripts/audit-dependencies.mjs
       - name: Build unsigned Windows installer (CI validation only)
         if: steps.impact.outputs.package == 'true'
         env:

@@ -171,6 +171,7 @@ function getTrayText(settingsLang: string | undefined, key: keyof typeof en['tra
   return mainT(`tray.${key}`, undefined, resolveLang(settingsLang))
 }
 
+  let currentMenu: Electron.Menu | null = null
   const rebuild = () => {
     const settings = loadSettings()
     const t = (k: keyof typeof en['tray']) => getTrayText(settings.language, k)
@@ -245,7 +246,14 @@ function getTrayText(settingsLang: string | undefined, key: keyof typeof en['tra
         }
       }
     ])
-    tray?.setContextMenu(menu)
+    if (process.platform === 'win32') {
+      // Windows 11 can suppress the native setContextMenu right-click popup
+      // inside the hidden-icons overflow. Keep the menu explicit so there is
+      // exactly ONE owner of right-click opening (not both mechanisms).
+      currentMenu = menu
+    } else {
+      tray?.setContextMenu(menu)
+    }
   }
 
   // Both click and double-click MUST be idempotent. Windows sends two click
@@ -261,10 +269,18 @@ function getTrayText(settingsLang: string | undefined, key: keyof typeof en['tra
   tray.on('click', showFromTray)
   tray.on('double-click', showFromTray)
 
-  // setContextMenu() above already registers the native Windows right-click
-  // handler. Calling popUpContextMenu() again in a second right-click listener
-  // could immediately dismiss the menu (and leave Quit inaccessible).
-  // The menu is rebuilt on settings and display changes via rebuildTrayMenu().
+  // On Windows, do not pair a setContextMenu() registration with this
+  // explicit popup: they can race and immediately dismiss the menu.
+  // In the overflow flyout Windows 11 does not always show the context menu
+  // from setContextMenu alone. The native right-click event is the sole owner.
+  if (process.platform === 'win32') {
+    tray.on('right-click', () => {
+      if (!tray || tray.isDestroyed()) return
+      rebuild() // Current checkmarks / display choices, before showing.
+      if (currentMenu) tray.popUpContextMenu(currentMenu)
+    })
+  }
+  // Other platforms continue to use Electron's normal setContextMenu path.
 
   // Listen for display changes to keep tray context menu updated in real-time (register once).
   if (!screenListenersRegistered) {

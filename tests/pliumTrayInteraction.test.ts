@@ -84,10 +84,19 @@ describe('PLIUM system tray interactions', () => {
     expect(mocks.toggle).toHaveBeenNthCalledWith(3, true)
   })
 
-  it('uses only the native right-click context menu, with Show, Settings and Quit', () => {
-    expect(mocks.setContextMenu).toHaveBeenCalledOnce()
-    expect(mocks.events.has('right-click')).toBe(false)
-    expect(mocks.popup).not.toHaveBeenCalled()
+  it('uses one right-click owner and presents Show, Settings and Quit', () => {
+    if (process.platform === 'win32') {
+      // Windows 11 overflow needs explicit popUpContextMenu, never both routes.
+      expect(mocks.setContextMenu).not.toHaveBeenCalled()
+      expect(mocks.events.has('right-click')).toBe(true)
+      mocks.events.get('right-click')!()
+      expect(mocks.popup).toHaveBeenCalledOnce()
+      expect(mocks.popup).toHaveBeenCalledWith(expect.objectContaining({ items: expect.any(Array) }))
+    } else {
+      expect(mocks.setContextMenu).toHaveBeenCalledOnce()
+      expect(mocks.events.has('right-click')).toBe(false)
+      expect(mocks.popup).not.toHaveBeenCalled()
+    }
     const labels = mocks.menuTemplate.map((item) => item.label)
     expect(labels).toContain('Show Clipboard')
     expect(labels).toContain('Settings')

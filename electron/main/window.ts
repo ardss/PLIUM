@@ -20,7 +20,7 @@ import { runtime } from './config'
 import { PATHS } from '../store/paths'
 import { TRANSLATIONS, en } from '../../src/i18n/translations'
 import { mainT, resolveLang } from './i18n'
-import { computeStickBounds } from './geometry'
+import { computeStickBounds, samePhysicalWorkArea } from './geometry'
 import { isSafeExternalUrl } from './externalUrl'
 import { WorkAreaCache } from './workAreaCache'
 import { probeSeamAware, isNearProximity, type SeamTickState } from './stickProbe'
@@ -765,6 +765,17 @@ function getStickGeometry(): { x: number; y: number; width: number; height: numb
         stickDisplayWorkArea: resolved.workArea,
         stickDisplayScaleFactor: resolved.scaleFactor
       })
+    } else if (settings.stickDisplayId === undefined &&
+      settings.stickDisplayWorkArea !== undefined &&
+      samePhysicalWorkArea(resolved.workArea, settings.stickDisplayWorkArea)) {
+      // Saved geometry matched the physical monitor after Windows changed its
+      // DPI/work-area origin. Record the newly resolved session ID and bounds.
+      settings = saveSettings({
+        stickDisplayId: resolved.id,
+        stickDisplayWorkArea: resolved.workArea,
+        stickDisplayScaleFactor: resolved.scaleFactor
+      })
+      sendToMainWindow('state:settings', settings)
     }
   }
 
@@ -922,20 +933,71 @@ export function createWindow(): BrowserWindow {
     return { action: 'deny' }
   })
 
-  // Load the renderer.
-  if (APP_CONFIG.is.dev && process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  // The collapsed shelf must remain a VISIBLE (but transparent, click-through)
+  // native window: _pollTick deliberately skips fully hidden windows. In some
+  // Windows startup sessions, 'ready-to-show' never arrives for a transparent
+  // BrowserWindow created with show:false. Use did-finish-load as an independent
+  // completion signal, and register BOTH before triggering the load.
+  const startupWindow = mainWindow
+  let startupSurfaceReady = false
+  const revealStartupSurface = (reason: string): void => {
+    if (startupSurfaceReady || runtime.quitting || startupWindow.isDestroyed()) return
+    startupSurfaceReady = true
+    // The screen list can differ between app-ready and renderer-ready, notably
+    // during Windows login and multi-display docking. Resolve again before show.
+    startupWindow.setBounds(getStickGeometry())
+    startupWindow.showInactive()
+    startupWindow.setAlwaysOnTop(true, 'screen-saver')
+    applyNoActivateStyle(startupWindow, true)
+    requestPollBoost(3000)
+    console.log('[Window] Transparent cursor surface ready via ' + reason +
+      '; bounds=' + JSON.stringify(startupWindow.getBounds()))
+
+    // One reconciliation after Windows display enumeration settles. Unlike a
+    // recurring geometry timer, this does not interfere with user interactions.
+    setTimeout(() => {
+      if (runtime.quitting || startupWindow.isDestroyed() || mainWindow !== startupWindow) return
+      const desired = getStickGeometry()
+      const actual = startupWindow.getBounds()
+      if (actual.x !== desired.x || actual.y !== desired.y ||
+          actual.width !== desired.width || actual.height !== desired.height) {
+        startupWindow.setBounds(desired)
+        console.log('[Window] Startup display reconciliation: ' +
+          JSON.stringify(actual) + ' -> ' + JSON.stringify(desired))
+      }
+    }, 1000)
+  }
+  startupWindow.once('ready-to-show', () => revealStartupSurface('ready-to-show'))
+  let rendererLoaded = false
+  startupWindow.webContents.once('did-finish-load', () => {
+    rendererLoaded = true
+    revealStartupSurface('did-finish-load')
+  })
+
+  const loadRenderer = (attempt: number): void => {
+    if (startupWindow.isDestroyed() || runtime.quitting) return
+    const load = APP_CONFIG.is.dev && process.env.ELECTRON_RENDERER_URL
+      ? startupWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+      : startupWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    void load.catch(err => {
+      console.error('[Window] Renderer load attempt ' + attempt + ' failed:', err)
+    })
   }
 
-  mainWindow.once('ready-to-show', () => {
-    if (!mainWindow) return
-    mainWindow.showInactive()
-    // 'screen-saver' level stays above fullscreen browser windows and games.
-    mainWindow.setAlwaysOnTop(true, 'screen-saver')
-    applyNoActivateStyle(mainWindow, true)
+  // Windows A reproducibly left file:// navigation loading indefinitely on
+  // hidden startup (isLoadingMainFrame=true, URL empty for several minutes).
+  // A one-time stop + reload immediately recovered it in a live experiment.
+  // Retry once only, and only if the FIRST navigation never finished.
+  const startupRetryTimer = setTimeout(() => {
+    if (runtime.quitting || startupWindow.isDestroyed() || rendererLoaded) return
+    console.warn('[Window] Renderer initial navigation stalled; retrying once')
+    startupWindow.webContents.stop()
+    loadRenderer(2)
+  }, 8000)
+  startupWindow.webContents.once('did-finish-load', () => {
+    clearTimeout(startupRetryTimer)
   })
+  loadRenderer(1)
 
   mainWindow.webContents.on('console-message', ({ message, lineNumber, sourceId }) => {
     console.log(`[Renderer] ${message} (${sourceId}:${lineNumber})`)
@@ -991,14 +1053,8 @@ export function getActiveDisplayId(allDisplays?: Electron.Display[]): number {
 
   // Tier 2: fuzzy workArea match (cross-reboot).
   if (settings.stickDisplayWorkArea !== undefined) {
-    const TOLERANCE = 8
     const sa = settings.stickDisplayWorkArea
-    const candidates = displays.filter(d =>
-      Math.abs(d.workArea.x - sa.x) <= TOLERANCE &&
-      Math.abs(d.workArea.y - sa.y) <= TOLERANCE &&
-      Math.abs(d.workArea.width - sa.width) <= TOLERANCE &&
-      Math.abs(d.workArea.height - sa.height) <= TOLERANCE
-    )
+    const candidates = displays.filter(d => samePhysicalWorkArea(d.workArea, sa))
     if (candidates.length === 1) return candidates[0].id
     if (candidates.length > 1 && settings.stickDisplayScaleFactor !== undefined) {
       const byScale = candidates.find(d => d.scaleFactor === settings.stickDisplayScaleFactor)

@@ -32,9 +32,11 @@ PLIUM runs on Windows 10/11 x64. Not every third-party app accepts every drop fo
 
 ## Preview status and downloads
 
-Current locally verified preview: **`0.4.0-plium.10`**, tested on Windows B and installed with history-preservation checks on Windows A in November 2026. Source and native-interaction automated checks have passed; **public release checks are still incomplete** (publisher signing, cold reboot, every supported monitor/display scenario). **There is no official public PLIUM installer or online updater yet.**
+**Preparing the first independent PLIUM `v1.0.0` Windows release.** The previous `1.0.0-beta.3` internal build remains installed on Windows A until the final candidate is independently verified. Windows B has passed 93 test files / 967 tests, a native edge-hover/retract test, global Alt+C, tray click/right-click, and ten synthetic Electron integration checks; Windows A final-version upgrade, real external drag-out, tray double-click and cold-login tests are still outstanding. **No public installer or online auto-updater is available yet.**
 
-When a verified PLIUM release is published, it will appear on [PLIUM Releases](https://github.com/ardss/PLIUM/releases). **Do not use upstream Edge-Drop installers to update PLIUM.**
+**Unsigned installer warning:** The initial release will not be code-signed, by maintainer decision. Windows may show an **Unknown Publisher** or Microsoft Defender **SmartScreen** warning. Obtain releases only from the [official GitHub repository](https://github.com/ardss/PLIUM/releases), compare the published SHA-256, and decide whether to install. This project does not claim Microsoft certification. Do not disable security protections to install.
+
+See the [current release gates and risk register](docs/RELEASE-STATUS.md). Once verified, PLIUM releases will appear on [PLIUM Releases](https://github.com/ardss/PLIUM/releases). **Do not use upstream Edge-Drop installers to update PLIUM.**
 
 ## Build from source
 
@@ -55,7 +57,7 @@ The unsigned local installer is built under `dist/`. For development use `npm ru
 
 PLIUM uses `PLIUM.exe`, AppID `com.ardss.plium` and a separate profile under `%APPDATA%\plium`. It never uses the upstream's online updater, store listing or installer identity. Historical Edge-Drop clipboard profiles are not silently replaced; migrating from an original installation requires explicit backup and verification.
 
-See [Privacy](PRIVACY.md), [Security reporting](SECURITY.md), [Upstream history](UPSTREAM-HISTORY.md) and [Preview release / migration notes](PLIUM-PREVIEW.md).
+See [Privacy](PRIVACY.md), [Security reporting](SECURITY.md), [Code signing policy](CODE-SIGNING-POLICY.md), [Upstream history](UPSTREAM-HISTORY.md) and [Preview release / migration notes](PLIUM-PREVIEW.md).
 
 ## Feedback and contribution
 

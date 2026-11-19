@@ -69,6 +69,24 @@ describe('hover open delay — persisted settings', () => {
     expect(loadSettings().hoverOpenDelay).toBe(0)
   })
 
+  it('preserves security and startup choices in a UTF-8 BOM settings file', () => {
+    // Windows PowerShell 5.1 writes a BOM by default. Ignoring this file
+    // silently falls back to launchAtLogin: true and incognito: false.
+    writeFileSync(paths.settingsFile, '\uFEFF' + JSON.stringify({
+      launchAtLogin: false,
+      incognito: true,
+      stickPosition: 'top',
+      hotZoneWidth: 7,
+      hoverOpenDelay: 400
+    }), 'utf8')
+    const settings = loadSettings()
+    expect(settings.launchAtLogin).toBe(false)
+    expect(settings.incognito).toBe(true)
+    expect(settings.stickPosition).toBe('top')
+    expect(settings.hotZoneWidth).toBe(7)
+    expect(settings.hoverOpenDelay).toBe(400)
+  })
+
   it('heals corrupt stored values on load', () => {
     writeFileSync(paths.settingsFile, JSON.stringify({ hoverOpenDelay: 'slow' }))
     expect(loadSettings().hoverOpenDelay).toBe(0)

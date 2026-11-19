@@ -1,6 +1,8 @@
 node_modules
 out
+out-stale-*
 dist
+dist-release
 *.log
 drag_debug.txt
 clipboard_debug.log

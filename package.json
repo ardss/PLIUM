@@ -1,6 +1,6 @@
 {
   "name": "plium",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PLIUM / 叠间 - an edge clipboard shelf for Windows",
   "author": "PLIUM contributors",
   "license": "Apache-2.0",
@@ -20,6 +20,8 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "test": "vitest run",
+    "audit:deps": "node scripts/audit-dependencies.mjs",
+    "audit:licenses": "node scripts/audit-licenses.mjs",
     "postinstall": "install-electron"
   },
   "build": {
@@ -79,7 +81,15 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "artifactName": "PLIUM-Setup-${version}.${ext}"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ardss",
+        "repo": "PLIUM",
+        "releaseType": "release"
+      }
+    ]
   },
   "devDependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
@@ -107,6 +117,7 @@
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
+    "electron-updater": "6.8.11",
     "koffi": "^3.1.2",
     "react": "^18.2.0",
     "zustand": "^4.5.2"
